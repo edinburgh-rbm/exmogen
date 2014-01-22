@@ -1,0 +1,1012 @@
+open Printf
+
+open Prelude
+
+(* Todd-Coxeter algorithm *)
+
+(* Problème: renommage récursif.
+   Solution 1: renommer brutalement tout dans toutes les tables
+   Solution 2: maintenir une structure de donnée associant nouveaux indices
+               aux anciens, avec compression de chemins. *)
+
+(* The set of generators in a presentation does not contain inverses: they need to be added
+ * by hand. We use a disjoint union of two copies of the generators as the alphabet of relators. *)
+type 'a and_inverses =
+| Elt of 'a
+| Inv of 'a
+
+module type FreeGroup =
+sig
+  
+  (* An abstract type of generators for the group. *)
+  type generator
+
+  (* Abstract type of "elements", i.e. generators plus formal inverses *)
+  type elt = generator and_inverses
+
+  (* A set of generators. They /must/ be distinct. *)
+  val  generators : generator array
+
+  val print : generator -> string
+
+end
+
+module type FinitelyPresentedGroup =
+sig
+  
+  include FreeGroup
+
+  (* A set of relators. They *should* be distinct,
+   * but the algorithm will of course work with syntactically equal relators. *)
+  val relators : (elt array) array
+
+  (* A subgroup of the finitely presented group. *)
+  val subgroup : (elt array) array
+    
+end
+
+
+(* Compute the table of right cosets of G modulo H, i.e. the cosets Hx for x \in G.
+ * This algorithm (tries to) computes a transversal for G modulo H *)
+module ToddCoxeter
+  (GmodH : FinitelyPresentedGroup)
+  =
+struct
+
+  module Repr :
+    sig
+      type coset
+      type generator
+      type row = coset array
+
+      (* Translate data from [GmodH] to internal repr *)
+      val from_abstract : GmodH.elt -> generator
+      val to_abstract   : generator -> GmodH.elt
+
+      val generators    : generator array
+      val relators      : generator array array
+      val subgroup      : generator array array
+
+      (* standard stuff *)
+      val identity_coset : coset        
+      val coset_undefined : coset -> bool
+      val inverse       : generator -> generator
+      val next_coset    : coset -> coset
+
+      (* handling finite families of cosets indexed by generators (called "rows") *)
+      val minimal_generator : generator
+      val create_row    : unit -> row
+      val index         : row -> generator -> coset option
+      val assign        : row -> generator -> coset -> unit 
+
+      val print_coset : coset -> string
+      val print_generator : generator -> string
+      val print_row : row -> string
+
+    end =
+  struct
+
+    type coset     = int
+    type generator = int
+
+    (* -------------------------------------------------------------- *)
+    (* Initialisation *)
+    (* -------------------------------------------------------------- *)
+
+    (* Produce tables translating between concrete and abstract elements *)
+    let forward, backward =
+      let forward  = Hashtbl.create (Array.length GmodH.generators * 2) in
+      let backward = Hashtbl.create (Array.length GmodH.generators * 2) in
+      let c = ref 0 in
+      for i = 0 to Array.length GmodH.generators - 1 do
+        Hashtbl.add forward !c (Elt GmodH.generators.(i));
+        Hashtbl.add backward (Elt GmodH.generators.(i)) !c;
+        incr c;
+        Hashtbl.add forward !c (Inv GmodH.generators.(i));
+        Hashtbl.add backward (Inv GmodH.generators.(i)) !c;
+        incr c
+      done;
+      (forward, backward)
+
+    (* ---------------------------------------------------------------- *)
+    (* Tables setup                                                     *)
+    (* ---------------------------------------------------------------- *)
+
+    let generators : generator array =
+      Array.init (Array.length GmodH.generators * 2) (fun i -> i)
+
+
+    (* Convert relators to the concrete repr. *)
+    let relators : generator array array  =
+      Array.map ((Array.map (Hashtbl.find backward))) GmodH.relators
+
+    (* Convert subgroup generators *)
+    let subgroup : generator array array =
+      Array.map ((Array.map (Hashtbl.find backward))) GmodH.subgroup
+
+    let identity_coset = 0
+
+    let coset_undefined x = x < 0
+
+    let from_abstract x = Hashtbl.find backward x
+
+    let to_abstract   x = Hashtbl.find forward x
+
+    let inverse x =
+      if x mod 2 = 0 then x+1
+      else x-1
+
+    let next_coset x = x + 1
+
+    (* ---------------------------------------------------------------- *)
+    (* Rows                                                             *)
+    (* ---------------------------------------------------------------- *)
+    
+    type row = coset array
+
+    let minimal_generator : generator = 0
+  
+    let create_row : unit -> row =
+      fun () -> Array.make (Array.length GmodH.generators * 2) (-1)
+
+    let index : row -> generator -> coset option =
+      fun row gen -> if row.(gen) >= 0 then Some row.(gen) else None
+
+    let assign : row -> generator -> coset -> unit =
+      fun row gen coset ->
+        row.(gen) <- coset
+
+    let print_coset : coset -> string = string_of_int
+
+    let print_generator_aux =
+      function 
+      | Inv e -> sprintf "%s^-" (GmodH.print e)
+      | Elt e -> GmodH.print e
+
+    let print_generator : generator -> string =
+      fun g ->
+        print_generator_aux (to_abstract g)
+
+    let print_row : row -> string =
+      fun row ->
+        let acc = ref "" in
+        for i = 0 to Array.length row - 1 do
+          acc := !acc^(sprintf "%d " row.(i))
+        done;
+        !acc
+
+  (* DEBUG 
+     let _ = Array.iter (fun i -> 
+     printf "%d -> %d %s\n" i generators.(i) (print_generator_aux (Hashtbl.find forward generators.(i)))
+     ) generators
+  *)
+
+  end
+
+  (* The width of a row is equal to the number of generators times two (for negatives) *)
+  let row_width = 2 * (Array.length GmodH.generators)
+
+  (* ---------------------------------------------------------------- *)
+  (* Union-find augmented hashtables for handling cosets              *)
+  (* ---------------------------------------------------------------- *)
+
+  module CosetTable =
+    struct
+
+      (* Imperative, non-persistent union-find for integers, built on
+       * top of a Hashtable. *)
+
+      type ('a, 'b) disj =
+      | Inl of 'a
+      | Inr of 'b
+
+      type 'b tree = {
+        mutable rank   : int;
+        mutable uplink : ('b tree, 'b) disj
+      }
+
+      type t = (Repr.coset, Repr.row tree) Hashtbl.t
+
+      let create sz = Hashtbl.create sz
+
+      let add table key elt = 
+        Hashtbl.add table key { rank = 0; uplink = Inr elt }
+
+      (* TODO: we can dispense with propagating the root data and
+       * access it through the returned root itself. *)
+      let rec find_aux node =
+        match node.uplink with
+        | Inl t -> 
+          let ((_, up) as res) = find_aux t in
+          node.uplink <- Inl up;
+          res
+        | Inr d ->
+          (d, node)
+
+      let find table key =
+        let node = Hashtbl.find table key in
+        fst (find_aux node)
+
+      let mem table key =
+        Hashtbl.mem table key
+
+      (* We add a further invariant to [union] compared to standard
+       * union-find: we conserve the data indexed by the minimal keys
+       *)
+      let rec union (table : t) key1 key2 =
+        let (key1, key2) =
+          if key1 > key2 then (key2, key1) else (key1, key2)
+        in
+        let (row1, root1) = find_aux (Hashtbl.find table key1) in
+        let (row2, root2) = find_aux (Hashtbl.find table key2) in
+        (* update tree *)
+        begin
+        if root1 == root2 then (* we're done *)          
+          ()
+        else if root1.rank < root2.rank then
+          (root1.uplink <- Inl root2;
+           root2.uplink <- Inr row1)
+        else if root2.rank < root1.rank then
+          root2.uplink <- Inl root1
+        else
+          (root2.uplink <- Inl root1;
+           root1.rank <- root1.rank + 1)
+        end;
+        (* unify conflicting data, updating row1 when undefined *)
+        union_rows table row1 row2
+
+      and union_rows table row1 row2 =
+        for i = 0 to Array.length row1 - 1 do
+          let a = Repr.coset_undefined row1.(i)
+          and b = Repr.coset_undefined row2.(i) in
+
+          if a && not b then
+            row1.(i) <- row2.(i)
+          else if not a && b then
+            row2.(i) <- row1.(i)
+          else if not a && not b && row1.(i) <> row2.(i) then (* the inequality test here would deserve some abstraction *)
+            union table row1.(i) row2.(i)
+        done
+
+      let roots (table : t) =
+        Hashtbl.fold (fun coset elt acc ->
+          match elt.uplink with
+          | Inl _ -> acc
+          | Inr _ -> coset :: acc
+        ) table []
+          
+      let print_row row =
+        let acc = ref "" in
+        for i = 0 to Array.length row - 1 do
+          acc := !acc^(sprintf "%s " (Repr.print_coset row.(i)))
+        done;
+        !acc
+
+      let print (table : t) =
+        let l = ref [] in
+        Hashtbl.iter (fun coset row ->
+          let row = fst (find_aux row) in
+          let s =
+            sprintf "%s |-> %s\n%!" (Repr.print_coset coset) (print_row row)
+          in
+          l := (coset, s) :: !l
+        ) table;
+        let l = List.sort compare !l in
+        List.iter (fun (_, s) -> print_string s) l
+
+    end
+
+
+  (* ---------------------------------------------------------------- *)
+  (* Hashtable related stuff and wrapping of std functions            *)
+  (* ---------------------------------------------------------------- *)
+      
+  (* It's hard to estimate the order of a group from its presentation. We go with an
+   * initial guess that matches the target applications ... *)
+  let order_guess = 100
+
+  (* Some standard wrappers on top of Hashtbl for the [group_table] type *)
+  let htable_create () = Hashtbl.create order_guess
+
+  (* let table_lookup_row { table } (e : coset) = *)
+  (*   try Some (Hashtbl.find table e) *)
+  (*   with Not_found -> None *)
+
+  let table_lookup (table : CosetTable.t) (e : Repr.coset) (g : Repr.generator) =
+    try
+      let row = CosetTable.find table e in
+      Repr.index row g
+    with
+    | Not_found -> None
+
+  (* let table_mem (table : CosetTable.t) (e : coset) (g : gen) = *)
+  (*   try (CosetTable.find table e).(g) > 0 with *)
+  (*   | Not_found -> false *)
+
+  let table_alloc_row (table : CosetTable.t) coset_index =
+    if CosetTable.mem table coset_index then
+      failwith "Group.ToddCoxeter.table_alloc_row: row already allocated"
+    else
+      let a = Repr.create_row () in
+      CosetTable.add table coset_index a;
+      a
+
+  (* Assume row is present. TODO: it might be not efficient to lookup the table at each := op *)
+  let table_set (table : CosetTable.t) (e : Repr.coset) (g : Repr.generator) (e' : Repr.coset) =
+    let row = CosetTable.find table e in
+    match Repr.index row g with
+    | None ->
+      Repr.assign row g e'
+    | Some _ ->
+      failwith "Group.ToddCoxeter.table_set: invariant broken"
+
+  (* Layout for rows in the coset_table:  g_0 g^-_0 g_1 g^-_1 ...
+   * i.e. inverses adjacent to each other. *)
+  let coset_table   = (CosetTable.create order_guess : CosetTable.t)
+
+  (* For each relator, a relator table. *)
+  (* r x = s -> r = s x^- *)
+  type coset_equation = {
+    mutable r : Repr.coset;
+    mutable x : Repr.generator Subarray.t;
+    mutable s : Repr.coset
+  }
+
+  let print_word (w : Repr.generator Subarray.t) =
+    let acc = ref "" in
+    let data = Subarray.data w in
+    for i = Subarray.left w to Subarray.right w do
+      acc := !acc^"."^(Repr.print_generator data.(i))
+    done;
+    !acc
+
+  let print_coset_equation { r; x; s } =
+    sprintf "%s * %s = %s" 
+      (Repr.print_coset r)
+      (print_word x)
+      (Repr.print_coset s)
+    
+  let relator_table : coset_equation list ref = ref []
+
+  let print_relator_table () =
+    List.iter (fun x -> printf "%s\n" (print_coset_equation x)) !relator_table
+
+  (* store gW = x as a word gWx, where g,x are elements and W is a word *)
+  let create_code r word s =
+    { r; x = Subarray.of_array word; s }
+
+  (* For each subgroup generator word, a simple table on the same model as for [relator_table] *)
+  (* TODO !!! we have no idea what is the real identity coset *)
+  let subgroup_table : coset_equation list ref =
+    let acc = ref [] in
+    for i = 0 to Array.length Repr.subgroup - 1 do
+      let subgroup_code = create_code Repr.identity_coset Repr.subgroup.(i) Repr.identity_coset in
+      acc := subgroup_code :: !acc
+    done;
+    acc
+
+  let print_subgroup_table () =
+    List.iter (fun x -> printf "%s\n" (print_coset_equation x)) !subgroup_table
+
+          
+  (* ---------------------------------------------------------------- *)
+  (* Table access and update                                          *)
+  (* ---------------------------------------------------------------- *)        
+
+  let rec propagate_equation coset_id generator_id result_coset =
+    (* invariant: coset_table.(coset_id).(generator_id) is undefined
+       and can be safely set. *)
+    let row = CosetTable.find coset_table coset_id in
+    (match Repr.index row generator_id with
+    | None ->
+      let _ = printf "assign in row %s col %s to %s\n%!" 
+        (Repr.print_coset coset_id) 
+        (Repr.print_generator generator_id)
+        (Repr.print_coset result_coset)
+      in
+      Repr.assign row generator_id result_coset
+    | Some coset ->
+      let _ = printf "unifying image of %s times %s = %s to %s\n%!" 
+        (Repr.print_coset coset_id)
+        (Repr.print_generator generator_id)
+        (Repr.print_coset coset)
+        (Repr.print_coset result_coset)
+      in      
+      CosetTable.union coset_table coset result_coset);
+    (* Conjugate equation *)
+    let row = CosetTable.find coset_table result_coset in
+    let inv = Repr.inverse generator_id in
+    (match Repr.index row inv with
+    | None ->
+      let _ = printf "assign in row %s col %s to %s\n%!" 
+        (Repr.print_coset result_coset) 
+        (Repr.print_generator inv)
+        (Repr.print_coset coset_id)
+      in
+      Repr.assign row inv coset_id
+    | Some coset ->
+      let _ = printf "unifying image of %s times %s = %s to %s\n%!" 
+        (Repr.print_coset result_coset)
+        (Repr.print_generator inv)
+        (Repr.print_coset coset)
+        (Repr.print_coset coset_id)
+      in
+      CosetTable.union coset_table coset coset_id)
+
+
+  let simplify_coset_equation (eq : coset_equation) =
+    let _ = printf "simplify coset eqn\n" in
+    let _ = CosetTable.print coset_table in
+    let continue = ref true in
+    let minimal  = ref false in
+    let change   = ref false in
+    while !continue do
+      Printf.printf "iterating with equation %s\n" (print_coset_equation eq);
+      continue := false;
+      let lft = Subarray.left eq.x
+      and rgt = Subarray.right eq.x in
+      if lft = rgt then
+          minimal := true
+      else begin
+        let front = Subarray.first eq.x in
+        let _ = printf "fwd looking up %s * %s ..." (Repr.print_coset eq.r) (Repr.print_generator front) in
+        begin match table_lookup coset_table eq.r front with
+        | None -> (printf "fail\n"; ())
+        | Some image_coset ->
+          (printf "success: %s\n" (Repr.print_coset image_coset);
+           Subarray.push_left eq.x;
+           eq.r <- image_coset;
+           continue := true;
+           change   := true
+          )
+        end;
+        let lft' = Subarray.left eq.x in        
+        if lft' = rgt then
+          minimal := true
+        else
+          let back = Subarray.last eq.x in
+          let _ = printf "bwd looking up %s * %s ..." (Repr.print_coset eq.s) (Repr.print_generator (Repr.inverse back)) in
+          begin match table_lookup coset_table eq.s (Repr.inverse back) with
+          | None -> (printf "fail\n"; ())
+          | Some image_coset ->
+            (printf "success: %s\n" (Repr.print_coset image_coset);
+             Subarray.pull_right eq.x;
+             eq.s <- image_coset;
+             continue := true;
+             change   := true
+            )
+        end;
+      end
+    done;
+    Printf.printf "  %s\n" (print_coset_equation eq);
+    (!minimal, !change)
+
+  (* PRECONDITION: in [equations], no equation is a deduction. 
+     POSTCONDITION: in [eq_acc], no equation is a deduction. eq_acc = equations - deductions.
+  *)
+  let rec simplify_equations 
+      (equations : coset_equation list)  (* list of equations to simplify *)
+      (eq_acc : coset_equation list)     (* accumulator of equations not yet transformed into deductions *)
+      (change_flag : bool)               (* boolean flag to check whether we reached a fixed point *)
+      =
+    match equations with
+    | [] -> (eq_acc, change_flag)
+    | coset_equation :: tail ->
+      let (minimal, change) = simplify_coset_equation coset_equation in
+      if minimal then
+        (propagate_equation coset_equation.r (Subarray.first coset_equation.x) coset_equation.s;
+         simplify_equations tail eq_acc true)
+      else
+        simplify_equations tail (coset_equation :: eq_acc) (change || change_flag)
+
+
+  let simplify_until_fixed_point () =
+    let _ = printf "simplify fixpoint iteration\n" in
+    let continue = ref true in
+    let relator_eqs  = ref !relator_table in
+    let subgroup_eqs = ref !subgroup_table in
+    while !continue do
+      print_string "coset table:\n";
+      CosetTable.print coset_table;
+      print_string "relators:\n";
+      print_relator_table ();
+      print_string "subgroup:\n";
+      print_subgroup_table ();
+
+      let (rel, rchange) = simplify_equations !relator_eqs [] false in
+      let (sub, schange) = simplify_equations !subgroup_eqs [] false in
+      relator_eqs := rel;
+      subgroup_eqs := sub;
+      continue := rchange || schange
+    done;
+      print_string "coset table:\n";
+      CosetTable.print coset_table;
+      print_string "relators:\n";
+      print_relator_table ();
+      print_string "subgroup:\n";
+      print_subgroup_table ();
+
+    relator_table := !relator_eqs;
+    subgroup_table := !subgroup_eqs
+
+  let allocate_fresh_coset coset_id =
+    let row = table_alloc_row coset_table coset_id in    
+    for i = 0 to Array.length Repr.relators - 1 do
+      let relator_code = create_code coset_id Repr.relators.(i) coset_id in
+      relator_table := relator_code :: !relator_table
+    done;
+    row
+
+  let rec first_undefined_column (row : Repr.row) i =
+    if i >= Array.length row then
+      None
+    else
+      if Repr.coset_undefined row.(i) then 
+        Some i
+      else first_undefined_column row (i+1)
+      
+  (* this new equation (and its conjugate) might trigger new 
+   * equations when rewritten in the subgroup and relator tables. *)
+
+  let todd_coxeter =
+    let coset_id  = ref Repr.identity_coset in
+    let allocated = Queue.create () in
+    let continue  = ref true in
+    (* We keep a pointer to the oldest unfilled coset. Initially, it is coset 0. *)
+    let row = allocate_fresh_coset !coset_id in
+
+    let last_unfilled_row   = ref row in
+    let last_unfilled_row_i = ref !coset_id in
+    let last_undefined_col  = ref 0 in
+    
+    while !continue do
+      (* invariant: there is a hole somewhere in the current row. *)
+      (* create fresh coset *)
+      coset_id := Repr.next_coset !coset_id;
+      let new_row = allocate_fresh_coset !coset_id in
+      Queue.add (!coset_id, new_row) allocated;
+
+      let _ = printf "\ncoset %s, col %d\n%!" (Repr.print_coset !last_unfilled_row_i) !last_undefined_col in
+      CosetTable.print coset_table;
+      print_string "\n";
+      print_string "relators:\n";
+      print_relator_table ();
+      print_string "subgroup:\n";
+      print_subgroup_table ();
+      
+      (* Propagate the equation
+         !last_unfilled_row_i . last_undefined_col = !coset_id
+         in the tables *)
+      propagate_equation !last_unfilled_row_i Repr.generators.(!last_undefined_col) !coset_id;
+      simplify_until_fixed_point ();
+
+      (* check termination and update variables *)
+      begin match first_undefined_column !last_unfilled_row !last_undefined_col with
+      | Some col -> (* continue *)
+        (* let s' = Repr.print_row (CosetTable.find coset_table !last_unfilled_row_i) in *)
+        (* let _ = printf "continue with column %d in coset %s : %s vs %s\n" *)
+        (* !last_undefined_col (Repr.print_coset !last_unfilled_row_i)
+        (Repr.print_row !last_unfilled_row)
+        s'
+        in *)
+        last_undefined_col := col
+      | None -> (* Go to next unfilled row *)
+        let next_row =
+          Prelude.take_until allocated (fun (coset, row) -> 
+            let acc = ref false in 
+            Array.iter (fun cos -> acc := !acc || Repr.coset_undefined cos) row;
+            !acc
+          )
+        in
+        (match next_row with
+        | None ->              (* We're finished. *)
+          continue := false
+        | Some (coset, row) -> (* Next row with holes *)
+          begin
+            last_unfilled_row_i := coset;
+            last_unfilled_row   := row;
+            match first_undefined_column !last_unfilled_row 0 with
+            | None     -> failwith "bug found"
+            | Some col -> last_undefined_col := col
+          end)
+      end
+    done
+
+  let _ = CosetTable.print coset_table
+
+  let roots = CosetTable.roots coset_table
+
+  let _ = List.iter (fun x -> printf "%s " (Repr.print_coset x)) roots
+
+  (* Given a coset and a complete table, how to compute the corresponding transversal ? *)
+  let transversal_of_coset c = ()
+
+
+end
+
+
+(* Persistent perms implemented by cycles *)
+module type PermSig =
+sig
+  val size : int
+end
+
+
+module Perm(P : PermSig) =
+struct
+
+  let size = P.size
+
+  (* ------------------------------- *)
+  (* Operations on real permutations *)
+
+  module Concrete =
+  struct
+
+    (* Invariants:
+       1 cycles are nonempty lists
+       2 1-element cycles are omitted
+    *)
+    type cycle = int array
+
+    (* A perm is a list of /disjoint/ cycles -- i.e. a set of cycles,
+     * implemented as a map from elements to pairs of 
+     * (cycles containing those elements, image through the permutation).
+     * Sharing allows to not waste too much memory, and we compute the
+     * orbit of an element in O(log(n)) (the access time)
+     *)
+    type t = (cycle * int) IntMap.t
+
+    (* Identity permutation *)
+    let identity = IntMap.empty
+
+    let rec image_cycle_aux first point = function
+      | [] -> failwith "Perm.image_cycle_aux: bug found"
+      | [x] ->
+        if x = point then first
+        else failwith "Perm.image_cycle_aux: bug found"
+      | x :: ((y :: tl) as ytl) ->
+        if x = point then
+          y
+        else
+          (image_cycle_aux first point ytl)
+
+    let image_cycle point cyc =
+      let res = ref 0 in
+      let len = Array.length cyc in
+      for i = 0 to len - 1 do
+        if cyc.(i) = point then
+          res := cyc.((i+1) mod len)
+      done;
+      !res
+
+    (* Image of an element through a perm *)
+    (* O(log(n)) *)
+    let image x perm =
+      try 
+        snd (IntMap.find x perm)
+      with
+        Not_found -> x
+
+    (* Orbit of an element through a perm, i.e. cycle of the elt *)
+    let orbit_perm x perm =
+      try 
+        fst (IntMap.find x perm)
+      with
+        Not_found -> [x]
+
+    (* Product of two permutations and related functions *)
+    let rec compute_cycle_aux p1 p2 first i acc =
+      let i' = image i p1 in
+      let j  = image i' p2 in
+      if j = first then (List.rev acc)
+      else
+        compute_cycle_aux p1 p2 first j (j :: acc)
+
+    let compute_cycle p1 p2 i =
+      Array.of_list (compute_cycle_aux p1 p2 i i [i])
+
+    (* Product of two permutations. This is relatively costly. *)
+    let prod (p1 : t) (p2 : t) =
+      let result = ref IntMap.empty in
+      let bv  = Bitv.create size false in
+      for i = 0 to size - 1 do
+        if not (Bitv.get bv i) then
+          begin
+            let cyc = compute_cycle p1 p2 i in
+            let len = Array.length cyc in
+            if len = 0 then
+              failwith "Perm.prod: empty cycle"
+            else if len > 1 then
+              let map = Array.fold_left (fun map x ->
+                Bitv.set bv x true;
+                IntMap.add x (cyc, image_cycle x cyc) map
+              ) !result cyc in
+              result := map
+            else ()
+          end
+        else
+          ()
+      done;
+      !result
+        
+    (* Inverse of a cycle. *)
+    let inv_cycle cyc =
+      let arr = Array.copy cyc in
+      let len = Array.length arr in
+      for i = 0 to len / 2 do
+        let tmp = arr.(i) in
+        arr.(i) <- arr.(len - i - 1);
+        arr.(len - i - 1) <- tmp
+      done;
+      arr
+
+    (* A wrapper to ensure no cycle is duplicated. Reduces memory waste. 
+     * A hashtable is used to intercept duplicates. The size of the hashtable is
+     * set to [size]: in average, a permutation has log(size) different cycles so
+     * collisions should be pretty rare (for big enough size). 
+     * This is set with the assumption that size won't be enormous either. *)
+    let inv_cycle_persistent () =
+      let table = Hashtbl.create size in
+      fun cyc ->
+        try Hashtbl.find table cyc with
+        | Not_found ->
+          begin
+            let icyc = inv_cycle cyc in
+            Hashtbl.add table cyc icyc;
+            icyc
+          end
+
+    (* Inverse of a permutation. *)
+    let inv (p : t) =
+      let invert_cycle = inv_cycle_persistent () in
+      IntMap.fold (fun key (cycle, point) acc ->
+        IntMap.add point (invert_cycle cycle, key) acc
+      ) p IntMap.empty
+
+    let action perm point = image point perm
+
+    let add_mapping perm point image cycle =
+      IntMap.add point (cycle, image) perm
+
+    let push_cyc perm cyc =
+      let len = Array.length cyc in
+      let acc = ref perm in
+      for i = 0 to len - 1 do
+        acc := add_mapping !acc cyc.(i) cyc.((i+1) mod len) cyc
+      done;
+      !acc
+
+    (* Create a perm from a list of /disjoint/ cycles. Notice we don't check for consistency. *)
+    let rec of_cycles cycles =
+      List.fold_left push_cyc identity cycles
+
+    let print perm =
+      let dom    = Prelude.mk_ints 0 (size - 1) in
+      let codom  = List.map (fun i -> image i perm) dom in
+      let doms   = Prelude.to_sseq string_of_int " " dom in
+      let codoms = Prelude.to_sseq string_of_int " " codom in
+      Printf.sprintf "%s\n%s\n" doms codoms
+
+  end
+    
+  (* ------------------------------------------------ *)
+  (* Lifting concrete operations to permutation words *)
+
+  type permrec = 
+    { p    : Concrete.t;
+      invp : Concrete.t  }
+      
+  (* We want to avoid computing products and inverses unless we really need to.
+   * Products of perms are simply lists of perms, and we compute the product only
+   * when explicitly required. *)
+  type t = 
+  | Perm of permrec
+  | Prod of t * t
+  | Inv  of t
+
+  (* Normalize a perm *)
+  let rec normalize_aux x =
+    match x with
+    | Perm p -> p
+    | Prod(l, r) ->
+      let nl = normalize_aux l in
+      let nr = normalize_aux r in
+      { p    = Concrete.prod nl.p nr.p;
+        invp = Concrete.prod nr.invp nl.invp }
+    | Inv p ->
+      let np = normalize_aux p in
+      { p = np.invp; invp = np.p }
+
+  let normalize x = Perm (normalize_aux x)
+
+  let identity = Perm { p = Concrete.identity; invp = Concrete.identity }
+
+  (* Moderately smart constructor (still O(1)) *)
+  let invert p =
+    match p with
+    | Inv p' -> p'
+    | _ -> Inv p
+
+  let rec power x n =
+    if n = 0 then identity
+    else if n = 1 then x
+    else if n mod 2 = 0 then
+      let px = power x (n/2) in
+      Prod(px, px)
+    else
+      let px = power x (n/2) in
+      Prod(Prod(px, px),px)
+
+  let rec action perm point =
+    match perm with
+    | Perm p -> Concrete.action p.p point
+    | Prod(l, r) ->
+      action r (action l point)
+    | Inv p ->
+      invert_action p point
+
+  and invert_action perm point =
+    match perm with
+    | Perm p -> Concrete.action p.invp point
+    | Prod(l, r) ->
+      invert_action l (invert_action r point)
+    | Inv p ->
+      action p point
+
+  (* Compute the orbit of a set of elements, and for each point in the
+     orbit, a transversal. Another slower but more compact method would be to
+     use a Schreier tree (i.e. a prefix tree with paths labelled by permutation 
+     words). Storing the full transversal allows for direct access to
+     its elements. 
+
+     TODO: possibly more efficient algo, taking advantage of the cycles stored
+     in the perm. Each elt of the cycle corresponds to a particular power of
+     the perm acting on the considered point. This gives for each point and each
+     group element the complete set of all possible transitions to other points.
+     Orbit is then the connected component of a point. 
+
+     NOTE: in the following algo, we forget the orignating point and return
+     only for each point in the orbit the corresponding transversal.
+  *)    
+  let orbit group points =
+    let queue        = Queue.create () in
+    let transversals = ref IntMap.empty in
+    let visited      = Bitv.create size false in
+    List.iter (fun point -> Queue.add (point, identity) queue) points;
+    while not (Queue.is_empty queue) do
+      let (point, u) = Queue.take queue in
+      if Bitv.get visited point then ()
+      else begin
+        Bitv.set visited point true;
+        transversals := IntMap.add point u !transversals;
+        List.iter (fun g ->
+          Queue.add (action g point, Prod(u, g)) queue
+        ) group
+      end
+    done;
+    !transversals
+
+  let of_cycles cycles =
+    let cp = Concrete.of_cycles cycles in
+    Perm { p = cp; invp = Concrete.inv cp }
+
+  let print p =
+    let perm = normalize_aux p in
+    Concrete.print perm.p
+
+  let print_orbit orb =
+    let points = IntMap.bindings orb in
+    Prelude.to_sseq (fun (point, transversal) ->
+      Printf.sprintf "%d with transversal:\n%s\n" point (print transversal)
+    ) "\n" points
+
+
+  module Operators =
+  struct
+    
+    let ( *** ) a b = Prod(a, b)
+      
+
+    let (^^) point perm = action perm point
+
+  end
+
+end
+
+module P = Perm(struct let size = 5 end)
+
+open P.Operators
+
+let alpha = P.of_cycles [ [| 0; 4; 1; 2 |] ]
+
+let beta  = P.of_cycles [ [| 0; 4; 3 |]; [| 1; 2 |] ]
+
+let ab = alpha *** beta
+
+let _ = Printf.printf "%s\n" (P.print alpha)
+
+let _ = Printf.printf "%s\n" (P.print beta)
+
+let _ = Printf.printf "%s\n" (P.print ab)
+
+(* Try some orbit computation *)
+
+let orb = P.orbit [ab] [ 0 ]
+
+let _ = print_string (P.print_orbit orb)
+
+(* Seems to work. *)
+
+(* ----------------------- *)
+(* Schreier-sims algorithm *)
+
+type subgroup = {
+  generators  : P.t list;    (* Generators of G^[i] *)
+  transversal : P.t IntMap.t (* the orbit is the domain of the map *)
+}
+
+type group = {
+  base      : int list;
+  chain     : subgroup list
+}
+
+
+(* Sifting, i.e. testing an element for inclusion in a group with
+   strong generators *)
+
+let rec sift_aux base_im chain =
+  match base_im, chain with
+  | [], [] -> true
+  | [], _
+  | _, [] -> failwith "inconsistent chain"
+  | x :: base', subgroup :: chain' ->
+    (IntMap.mem x subgroup.transversal) && sift_aux base' chain'
+
+let sift group perm =
+  let base'  = List.map (P.action perm) group.base in
+  sift_aux base' group.chain
+
+(* Schreier-Sims algorithm (from scratch) *)
+
+exception EarlyExit of int
+
+(* A nice invariant of our repesentation of permutations is that identity
+   mappings are not stored. Hence any binding will do. *)
+let rec find_point (generators : P.t list) =
+  match generators with
+  | [] -> None
+  | (P.Perm g) :: gens ->    
+    if IntMap.is_empty g.P.p then
+      find_point gens
+    else
+      Some (fst (IntMap.choose g.P.p))
+  | _ -> failwith "Group.find_point: generators not in normal form"
+
+(* It is assumed that the generators are normalized. *)
+let rec schreier_sims_aux (generators : P.t list) acc =
+  (* Find a point that is not fixed by a generator *)
+  match find_point generators with
+  | None -> (* trivial group - end recursion *)
+    let points, subgroups = List.split acc in
+    { base  = List.rev points;
+      chain = List.rev subgroups }
+  | Some point ->
+    let orb  = P.orbit generators [point] in
+    let gens = (* Schreier generators for isotropy subgroup *)
+      IntMap.fold (fun point u acc ->
+        List.fold_left (fun acc g ->
+          let ug    = u *** g in
+          let ug_tr =
+            let img = P.action ug point in
+            try IntMap.find img orb with
+            | Not_found -> failwith "Group.schreier_sims: bug found, could not find transversal"
+          in
+          (* TODO: normalize these ... OR normalize as needed in [find_point] *)
+          (ug *** (P.Inv ug_tr)) :: acc
+        ) acc generators
+      ) orb [] in
+    let subgroup = { generators = gens;  transversal = orb } in
+    schreier_sims_aux gens ((point, subgroup) :: acc)
+
+let schreier_sims generators = schreier_sims_aux generators []
