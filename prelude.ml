@@ -32,6 +32,7 @@ let strof_ilist = to_sseq string_of_int ","
 
 let strof_iarr x = strof_ilist (Array.to_list x)
 
+(* duplicate an elt i times *)
 let rec dup elt i =
   if i < 0 then
     failwith "dup: count < 0"
@@ -40,10 +41,35 @@ let rec dup elt i =
   else
     elt :: (dup elt (i-1))
 
+(* list of integers from i to j *)
 let rec mk_ints i j =
   if i > j then []
   else
     i :: (mk_ints (i+1) j)
+
+(* max of a list *)
+let rec list_max m = function
+  | [] -> m
+  | x :: l ->
+    list_max (max m x) l
+
+(* min of a list *)
+let rec list_min m = function
+  | [] -> m
+  | x :: l ->
+    list_max (min m x) l
+
+let rec filter_duplicates' = function
+  | [] -> []
+  | [ x ] -> [ x ]
+  | x :: y :: l ->
+      if x = y then
+	filter_duplicates' (y :: l)
+      else
+	x :: (filter_duplicates' (y :: l))
+
+let filter_duplicates l =
+  filter_duplicates' (List.sort compare l)
 
 
 (* Integer map *)
@@ -59,6 +85,47 @@ module IntMap =
       else 0
 
   end)
+
+(* Integer set *)
+
+module IntSet =
+  Set.Make(struct
+
+    type t = int
+
+    let compare x y =
+      if x < y then -1
+      else if x > y then 1
+      else 0
+
+  end)
+
+(* Multiset *)
+module Multiset(O : Ordered) =
+  struct
+
+    module M = Map.Make(O)
+
+    type t = int M.t
+
+    let empty = M.empty
+
+    let count x (m : t) =
+      try M.find x m
+      with Not_found -> 0
+
+    let add x (m : t) =
+      M.add x (count x m + 1) m
+
+    let fold = M.fold
+
+    let equal (m :t) (m' : t) =
+      M.equal (fun x y -> x = y) m m'
+
+    let compare (m : t) (m' : t) =
+      M.compare (fun x y -> x - y) m m'
+
+  end
 
 (* Dynamic array - exponential reallocator *)
   
@@ -188,3 +255,17 @@ module Subarray =
       { a with data = Array.map f a.data }
 
   end
+
+(* Unix-based timer *)
+
+type timer = float ref
+
+let create_timer () = ref 0.0
+
+let start_timer timer = timer := (Unix.gettimeofday ())
+
+let reset_timer timer = timer := 0.0
+
+let get_timer timer   = 
+  let t = Unix.gettimeofday () in
+  t -. !timer

@@ -1,5 +1,9 @@
 open Prelude
 
+
+module Perm = Perm.Make(Perm.CycleBased)
+
+
 (* ----------------------- *)
 (* Schreier-sims algorithm *)
 
@@ -43,6 +47,8 @@ let rec find_point (generators : Perm.t list) =
     else
       Some (fst (IntMap.choose g.Perm.p))
   | _ -> failwith "Group.find_point: generators not in normal form"
+
+open Perm.Operators
 
 (* It is assumed that the generators are normalised. *)
 let rec schreier_sims_aux (generators : Perm.t list) acc =

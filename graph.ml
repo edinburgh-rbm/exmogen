@@ -28,7 +28,9 @@ type ('n,'l) info = {
   (* Colour of node *)
   clr : 'n;
   (* Adjacency relation supposed symmetric (invariant to be mainted) *)
-  adj : ('l * int) list
+  adj : ('l * int) list;
+  (* degree = |adj| *)
+  deg : int
 }
 
 type ('n, 'l) t = {
@@ -66,17 +68,17 @@ let get_neighbours graph v =
 (* TODO what to do with [buds] *)
 let add_node_with_colour graph clr =
   let v = graph.size in
-  let info = NodeIdMap.add v { clr; adj = [] } graph.info in
+  let info = NodeIdMap.add v { clr; adj = []; deg = 0 } graph.info in
   { graph with
     size = v + 1;
     info }
 
 let add_edge graph v1 l v2 =
   if v1 < graph.size && v2 < graph.size then
-    let { adj = a1 } as i1 = get_info graph v1
-    and { adj = a2 } as i2 = get_info graph v2 in
-    let info = NodeIdMap.add v1 { i1 with adj = (l, v2) :: a1 } graph.info in
-    let info = NodeIdMap.add v2 { i2 with adj = (l, v1) :: a2 } info in
+    let { adj = a1; deg = d1 } as i1 = get_info graph v1
+    and { adj = a2; deg = d2 } as i2 = get_info graph v2 in
+    let info = NodeIdMap.add v1 { i1 with adj = (l, v2) :: a1; deg = d1 + 1 } graph.info in
+    let info = NodeIdMap.add v2 { i2 with adj = (l, v1) :: a2; deg = d2 + 2 } info in
     { graph with info }
   else
     failwith "add_edge: invalid arguments"
@@ -102,3 +104,4 @@ let to_dot file_name graph_name graph print_node print_label =
   ) graph.info;
   print "}\n";
   close_out file_desc
+

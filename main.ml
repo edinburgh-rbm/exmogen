@@ -50,6 +50,7 @@ module Gram =
         | Double -> electrons (2 + acc) tl
         | Triple -> electrons (3 + acc) tl
 
+    (* The outcome lists could be hoisted.  *)
     let growth_policy nc llc =
       let e = electrons 0 llc in
       let c = match nc with
@@ -114,25 +115,17 @@ let oxygen =
   let g = Unrooted.empty in
   Unrooted.add_node_with_colour g Atom.P
 
-(* Allow 4 hydrogens to bind *)
-(*
+(* Allow 3 carbons and 10 hydrogens (+ the seed) to combine *)
+
 let mset =
-  [ (hydrogen, 4) ]
-*)
+  [ (carbon, 2); (hydrogen, 8) ]
 
-(* Allow 1 hydrogen to bind  *)
-(*
-let mset =
-  [ (hydrogen, 1) ]
-*)
-
-(* Allow 3 carbons and 8 hydrogens to bind  *)
-let mset =
-  [ (carbon, 4); (hydrogen, 8) ]
-
-(*
-
+let timer  = Prelude.create_timer ()
+let _      = Prelude.start_timer timer
+    
 let result = G.enumerate seed mset G.Canonical.empty
+
+let time   = Prelude.get_timer timer
 
 let result = G.Canonical.elements result
 
@@ -140,155 +133,47 @@ let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) resul
 
 let _ = List.iter (Printf.printf "%s\n" ) s
 
-*)
+let _ =  
+  Printf.printf "generation time: %f seconds\n" time
+
+let _ =  
+  Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Unrooted.Auto.cmlt)
 
 
-(* Testing group theoretic stuff *)
+(* -----------------------------
+   Test automorphism detection *)
 
-open Group
+module Auto = Auto.Make
+  (struct type t = int    
+          let compare = compare 
+          let print = string_of_int
+          let inhabited = 0
+   end)
+  (struct type t = string 
+          let compare = String.compare
+          let print x = x
+          let inhabited = ""
+   end)
+  
 
-type gen = R | F
+let graph = 
+  let g = Graph.empty in
+  let g = Graph.add_node_with_colour g 1 in
+  let g = Graph.add_node_with_colour g 0 in
+  let g = Graph.add_node_with_colour g 0 in
+  let g = Graph.add_node_with_colour g 0 in
+  let g = Graph.add_edge g 0 "" 1 in
+  let g = Graph.add_edge g 1 "" 2 in
+  let g = Graph.add_edge g 2 "" 3 in
+  Graph.add_edge g 3 "" 0
 
-let r = Elt R
-let f = Elt F
+let automorphisms = Auto.compute_automorphisms graph
 
-let print = function
-  | R -> "r"
-  | F -> "f"
-
-let print_elt f = function
-  | Elt x -> f x
-  | Inv x -> (f x)^"^-"
-
-
-open Prelude
-
-let dihedral = {
-  Group.generators = [| R; F |];
-  Group.relators   = [| Array.make 8 r;
-                        Array.make 2 f;
-                        [| r; f; r; f |] |];
-  Group.subgroup   = [||]
-}  
-
-let tables, state = ToddCoxeter.todd_coxeter dihedral
-
-let words = ToddCoxeter.abstract_representation tables
-
-let _ = 
-  List.iter (fun word ->
-    List.iter ((print_elt print) ++ print_string) word;
-    print_newline ()
-  ) words
+let _ = List.iter (fun x -> Printf.printf "%s\n" (Perm.ArrayBased.print x)) (Prelude.filter_duplicates automorphisms)
 
 
-type gen2 = A | B
-
-let print = function A -> "a" | B -> "b"
-
-let a = Elt A
-let b = Elt B
-let ai = Inv A
-let bi = Inv B
-
-let quaternion = {
-  Group.generators = [| A; B |];
-  Group.relators   = [| Array.make 4 a;
-                        Array.make 4 b;
-                        [| a; a; bi; bi |];
-                        [| bi; a; b; a |] |];
-  Group.subgroup   = [||]
-}  
-
-let tables, state = ToddCoxeter.todd_coxeter quaternion
-
-let words = ToddCoxeter.abstract_representation tables
-
-let _ = 
-  List.iter (fun word ->
-    List.iter ((print_elt print) ++ print_string) word;
-    print_newline ()
-  ) words
+let _ =  
+  Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Auto.cmlt)
 
 
-(*
 
-open Group
-
-module Dihedral =
-  struct
-    
-    type generator = R | F
-
-    type elt = generator and_inverses
-
-    let generators = [| R; F |]
-
-    let r = Elt R
-    let f = Elt F
-
-    let relators = [| Array.make 8 r;
-                      Array.make 2 f;
-                      [| r; f; r; f |] |]
-
-    let subgroup = [| |]
-
-    let print = function
-      | R -> "R"
-      | F -> "F"
-
-  end
-
-module Cyclic =
-  struct
-    
-    type generator = G
-
-    type elt = generator and_inverses
-
-    let generators = [| G |]
-
-    let g = Elt G
-
-    let relators = [| Array.make 5 g |]
-
-    let subgroup = [| |]
-
-    let print = function
-      | G -> "G"
-
-  end
-
-
-module Quaternion =
-  struct
-    
-    type generator = A | B
-
-    type elt = generator and_inverses
-
-    let generators = [| A; B |]
-
-    let a = Elt A
-    let b = Elt B
-
-    let ia = Inv A
-    let ib = Inv B
-
-
-    let relators = [| Array.make 4 a;
-                      Array.make 4 b;
-                      [| a; a; ib; ib |];
-                      [| ib; a; b; a |]
-                   |]
-
-    let subgroup = [| |]
-
-    let print = function
-      | A -> "A"
-      | B -> "B"
-
-  end
-
-module ToddTest = ToddCoxeter(Quaternion)
-*)
