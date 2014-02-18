@@ -50,21 +50,48 @@ module Gram =
         | Double -> electrons (2 + acc) tl
         | Triple -> electrons (3 + acc) tl
 
-    (* The outcome lists could be hoisted.  *)
-    let growth_policy nc llc =
-      let e = electrons 0 llc in
-      let c = match nc with
-        | C -> 4 - e
-        | H -> 1 - e
-        | O -> 2 - e
-        | P -> 1 - e
-      in match c with
+    let electrons x = electrons 0 x
+
+    let free_electrons = function
+      | C -> 4
+      | H -> 1
+      | O -> 2
+      | P -> 1
+
+    let bound_electrons = function
+      | Simple -> 1
+      | Double -> 2
+      | Triple -> 3
+
+    let extension_policy nc llc =
+      let c = (free_electrons nc) - (electrons llc) in
+      match c with
       | 0 -> []
       | 1 -> [Simple]
       | 2 -> [Simple; Double]
       | 3 -> [Simple; Double; Triple]
       | 4 -> [Simple; Double; Triple]
-      | _ -> failwith "inconsistent stuff happening"
+      | _ -> failwith "Main.extension_policy: inconsistent number of electrons"
+
+    let saturation_policy nc llc =
+      let c = (free_electrons nc) - (electrons llc) in
+      match c with
+      | 0 -> [ [] ]
+      | 1 -> [ [ Simple ] ]
+      | 2 -> [ [ Simple; Simple ]; [ Double ] ]
+      | 3 -> 
+            [ [ Simple; Simple; Simple ];
+              [ Simple; Double ];
+              [ Triple ];
+            ]
+      | 4 ->
+          [ [ Simple; Simple; Simple; Simple ];
+            [ Simple; Simple; Double ];
+            [ Simple; Triple ];
+            [ Double; Double ]
+          ]
+      | _ -> failwith "Main.saturation_policy: inconsistent number of electrons"
+
 
     let compatibility _ _ _ = true
 
@@ -118,21 +145,22 @@ let oxygen =
 (* Allow 3 carbons and 10 hydrogens (+ the seed) to combine *)
 
 let mset =
-  [ (carbon, 2); (hydrogen, 8) ]
+  [ (carbon, 5); (hydrogen, 14) ]
 
 let timer  = Prelude.create_timer ()
 let _      = Prelude.start_timer timer
     
-(*let result = G.enumerate seed mset G.Canonical.empty *)
+let result = G.enumerate seed mset G.Canonical.empty
 
 let time   = Prelude.get_timer timer
 
-(*let result = G.Canonical.elements result
+let result = G.Canonical.elements result
 
 let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) result
 
 let _ = List.iter (Printf.printf "%s\n" ) s
-*)
+
+
 let _ =  
   Printf.printf "generation time: %f seconds\n" time
 
@@ -142,9 +170,10 @@ let _ =
 let _ =  
   Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Unrooted.Auto.auto_count)
 
+(*
 let _ = 
   Printf.printf "max auto count: %d\n%!" !Unrooted.m
-
+*)
 
 (* -----------------------------
    Test automorphism detection *)

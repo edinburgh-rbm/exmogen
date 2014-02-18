@@ -71,6 +71,24 @@ let rec filter_duplicates' = function
 let filter_duplicates l =
   filter_duplicates' (List.sort compare l)
 
+(* Transforms a list of words into all possible
+   concatenations. I.e. take all the ordered
+   sections. *)
+let rec sections lists acc =
+  match lists with
+  | [] -> acc
+  | words :: tail ->
+    let res = List.fold_left (fun new_acc w ->
+      List.fold_left (fun acc accw ->
+        (accw @ w) :: acc
+      ) new_acc acc
+    ) [] words
+    in
+    sections tail res
+
+let sections l = 
+  sections l [[]]
+
 
 (* Integer map *)
 

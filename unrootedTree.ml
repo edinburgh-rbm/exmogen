@@ -25,11 +25,12 @@ module type GrammarType =
     (* type of label colours *)
     type lc
 
-    (* given a node with colour nc, and a list of coloured edges to neighbours, produce
-       a list of opportunities for connections among which /only one/ can be taken. We
-       assume that the behaviour of [growth_policy] is "monotonic": once it has stopped
-       proposing stuff, it will stay that way. *)
-    val growth_policy : nc -> lc list -> lc list
+    val extension_policy : nc -> lc list -> lc list
+
+    (* given a node with colour in [nc] and its connectivity, produce a
+     * list of /all/ growing possibilities for the node. After saturating
+     * any one of these possibilities, the node will be closed. *)
+    val saturation_policy : nc -> lc list -> lc list list
 
     (* validity of an edge (nc, lc, nc). *)
     val compatibility : nc -> lc -> nc -> bool
@@ -227,37 +228,47 @@ struct
   (* ------------------------------------------- *)
   (* Satisfy the Growable.GrowableType signature *)
 
-  let propose graph =
-    Graph.NodeIdMap.fold (fun v i acc ->
-      let (v, { Graph.clr; adj }) as info = (v, Graph.get_info graph v) in
-      let adjc  = List.map fst adj in
-      let links = Gram.growth_policy clr adjc in
-      List.fold_left (fun acc lc -> (info, lc) :: acc) acc links
-    ) (Graph.info graph) []
+  let extend : t -> plug list =
+    fun graph ->
+      Graph.NodeIdMap.fold (fun v i acc ->
+        let (v, { Graph.clr; adj }) as info = (v, i) in
+        let links = Gram.extension_policy clr (List.map fst adj) in
+        List.fold_left (fun acc lc -> (info, lc) :: acc) acc links
+      ) (Graph.info graph) []
 
+  let saturate : t -> plug list list =
+    fun graph ->
+      let result = 
+        Graph.NodeIdMap.fold (fun v i acc ->
+          let (v, { Graph.clr; adj }) as info = (v, i) in
+          let links = Gram.saturation_policy clr (List.map fst adj) in
+          (List.map (List.map (fun lc -> (info, lc))) links) :: acc
+        ) (Graph.info graph) []
+      in
+      Prelude.sections result
 
-  let m = ref 0
+  (* let m = ref 0 *)
 
-  let propose graph =
-    let autos = Auto.compute_automorphisms graph in
-    m := max !m (List.length autos);
-    let (acc, _) = Graph.NodeIdMap.fold (fun v i (acc, cover) ->
-      if
-        (* let _ = Printf.printf "_%!" in *)
-        IntSet.mem v cover then (acc, cover)
-      else
-        (* let _ = Printf.printf ".%!" in *)
-        let (_, { Graph.clr; adj }) as info = (v, Graph.get_info graph v) in
-        let adjc  = List.map fst adj in
-        let links = Gram.growth_policy clr adjc in
-        let cover = List.fold_left (fun cover perm ->
-          IntSet.union cover (Perm.ArrayBased.orbit perm v)
-        ) cover autos in
-        let acc   = List.fold_left (fun acc lc -> (info, lc) :: acc) acc links in
-        (acc, cover)
-    ) (Graph.info graph) ([], IntSet.empty)
-    in
-    acc
+  (* let propose graph = *)
+  (*   let autos = Auto.compute_automorphisms graph in *)
+  (*   m := max !m (List.length autos); *)
+  (*   let (acc, _) = Graph.NodeIdMap.fold (fun v i (acc, cover) -> *)
+  (*     if *)
+  (*       (\* let _ = Printf.printf "_%!" in *\) *)
+  (*       IntSet.mem v cover then (acc, cover) *)
+  (*     else *)
+  (*       (\* let _ = Printf.printf ".%!" in *\) *)
+  (*       let (_, { Graph.clr; adj }) as info = (v, Graph.get_info graph v) in *)
+  (*       let adjc  = List.map fst adj in *)
+  (*       let links = Gram.growth_policy clr adjc in *)
+  (*       let cover = List.fold_left (fun cover perm -> *)
+  (*         IntSet.union cover (Perm.ArrayBased.orbit perm v) *)
+  (*       ) cover autos in *)
+  (*       let acc   = List.fold_left (fun acc lc -> (info, lc) :: acc) acc links in *)
+  (*       (acc, cover) *)
+  (*   ) (Graph.info graph) ([], IntSet.empty) *)
+  (*   in *)
+  (*   acc *)
 
   (* Compute the disjoint union of two graphs. This implies shifting the nodes
      ids of graph2 by graph1.size. TODO incremental update of canonical root *)

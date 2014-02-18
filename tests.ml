@@ -168,3 +168,4 @@ let automorphisms = Auto.compute_automorphisms graph
 
 let _ = List.iter Auto.print (Prelude.filter_duplicates automorphisms)
   
+"
