@@ -236,8 +236,11 @@ struct
     ) (Graph.info graph) []
 
 
+  let m = ref 0
+
   let propose graph =
     let autos = Auto.compute_automorphisms graph in
+    m := max !m (List.length autos);
     let (acc, _) = Graph.NodeIdMap.fold (fun v i (acc, cover) ->
       if
         (* let _ = Printf.printf "_%!" in *)

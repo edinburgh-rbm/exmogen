@@ -19,10 +19,21 @@ sig
 
   (* identity takes as an argument the size of the set on which PermSig acts. *)
   val identity : t
+
+  (* product *)
   val prod     : t -> t -> t
+
+  (* inverse *)
   val inv      : t -> t
+
+  (* action *)
   val action   : t -> int -> int
+
+  (* orbit *)
   val orbit    : t -> int -> IntSet.t
+
+  (* any point not fixed by the perm. *)
+  val pick_from_support : t -> int option
 
   val of_cycles : int array list -> t
   val of_array  : int array -> t
@@ -97,6 +108,13 @@ struct
       Array.fold_right IntSet.add a IntSet.empty
     with
       Not_found -> IntSet.singleton x
+
+  let pick_from_support (perm : t) =
+    try
+      let (x, _) = IntMap.choose perm in
+      Some x
+    with
+      Not_found -> None
 
   (* Product of two permutations and related functions *)
   let rec compute_cycle_aux p1 p2 first i acc =
@@ -298,6 +316,18 @@ struct
 
   let orbit (perm : t) (x : int) =
     orbit_aux perm x IntSet.empty
+
+  let rec pick_from_support_aux (perm : t) i =
+    if i = Array.length perm then
+      None
+    else
+      if perm.(i) <> i then
+        Some i
+      else
+        pick_from_support_aux perm (i+1)
+
+  let pick_from_support perm =
+    pick_from_support_aux perm 0
 
   let print x =
     Prelude.strof_iarr x

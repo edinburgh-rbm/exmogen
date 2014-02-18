@@ -123,21 +123,27 @@ let mset =
 let timer  = Prelude.create_timer ()
 let _      = Prelude.start_timer timer
     
-let result = G.enumerate seed mset G.Canonical.empty
+(*let result = G.enumerate seed mset G.Canonical.empty *)
 
 let time   = Prelude.get_timer timer
 
-let result = G.Canonical.elements result
+(*let result = G.Canonical.elements result
 
 let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) result
 
 let _ = List.iter (Printf.printf "%s\n" ) s
-
+*)
 let _ =  
   Printf.printf "generation time: %f seconds\n" time
 
 let _ =  
   Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Unrooted.Auto.cmlt)
+
+let _ =  
+  Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Unrooted.Auto.auto_count)
+
+let _ = 
+  Printf.printf "max auto count: %d\n%!" !Unrooted.m
 
 
 (* -----------------------------
@@ -155,7 +161,6 @@ module Auto = Auto.Make
           let inhabited = ""
    end)
   
-
 let graph = 
   let g = Graph.empty in
   let g = Graph.add_node_with_colour g 1 in
@@ -171,9 +176,18 @@ let automorphisms = Auto.compute_automorphisms graph
 
 let _ = List.iter (fun x -> Printf.printf "%s\n" (Perm.ArrayBased.print x)) (Prelude.filter_duplicates automorphisms)
 
+let _ =  
+  Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Auto.auto_count)
 
 let _ =  
   Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Auto.cmlt)
 
 
+let t =
+  Perm.CycleBased.of_array [| 1;2;3;4;0 |]
 
+let t' = Perm.CycleBased.inv t
+
+let tt' = Perm.CycleBased.prod t t'
+
+let _ = Printf.printf "%s\n%!" (Perm.CycleBased.print tt')
