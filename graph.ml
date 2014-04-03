@@ -86,8 +86,7 @@ let add_edge graph v1 l v2 =
 (* --------------------------- *)
 (* Printing to DOT file format *)
 
-let to_dot file_name graph_name graph print_node print_label =
-  let file_desc = open_out file_name in
+let to_dot_aux file_desc graph_name graph print_node print_label =
   let print x   = Printf.fprintf file_desc x in
   print "graph %s {\n" graph_name;
     (* (\*  print "[overlap=false];\n"; *\) *)
@@ -102,6 +101,12 @@ let to_dot file_name graph_name graph print_node print_label =
       print "%d -- %d [label=\"%s\"];\n" i dest label
     ) elt.adj
   ) graph.info;
-  print "}\n";
+  print "}\n"
+
+let to_dot file_name graph_name graph print_node print_label =
+  let file_desc = open_out file_name in
+  to_dot_aux file_desc graph_name graph print_node print_label;
   close_out file_desc
 
+let print graph print_node print_label =
+  to_dot_aux stdout "" graph print_node print_label

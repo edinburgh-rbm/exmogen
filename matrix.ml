@@ -78,11 +78,11 @@ let is_positive a =
   done;
   !acc
 
-let init a i =
+let init a elt =
   for i = 0 to Array.length a - 1 do
     let ai = a.(i) in
     for j = 0 to Array.length a.(0) - 1 do
-      ai.(j) <- i
+      ai.(j) <- elt
     done
   done
 

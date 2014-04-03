@@ -233,6 +233,7 @@ struct
       of_array_aux arr (i+1) acc
 
   let of_array arr =
+    let _ = failwith "TODO: does not preserve canonicity of identity perm" in
     of_array_aux arr 0 identity
 
   let print perm =
@@ -253,9 +254,12 @@ end
 module ArrayBased =
 struct
 
+  (* That is ugly. For test purposes only. TODO *)
+  let size = ref 3
+
   type t = int array
 
-  let identity size = Array.init size (fun x -> x)
+  let identity = Array.init !size (fun x -> x)
 
   let prod a b =
     Array.init (Array.length a) (fun x -> b.(a.(x)))
@@ -330,7 +334,7 @@ struct
     pick_from_support_aux perm 0
 
   let print x =
-    Prelude.strof_iarr x
+    (Prelude.strof_iarr x)
 
 end
 
@@ -347,15 +351,15 @@ struct
     { p       : Concrete.t;
       invp    : Concrete.t; }
       
-(* We want to avoid computing products and inverses unless we really need to.
- * Products of perms are simply trees of perms, and we compute the product only
- * when explicitly required. We tag each node with the support of the perm. *)
+  (* We want to avoid computing products and inverses unless we really need to.
+   * Products of perms are simply trees of perms, and we compute the product only
+   * when explicitly required. We tag each node with the support of the perm. *)
   type t = 
   | Perm of permrec
   | Prod of t * t
   | Inv  of t
 
-(* Normalise a perm *)
+  (* Normalise a perm *)
   let rec normalise_aux x =
     match x with
     | Perm p -> p
@@ -367,10 +371,18 @@ struct
     | Inv p ->
       let np = normalise_aux p in
       { p = np.invp; invp = np.p }
+        
+  let of_concrete (p : Concrete.t) =
+    Perm { p    = p;
+           invp = Concrete.inv p }
 
   let normalise x = Perm (normalise_aux x)
 
   let identity = Perm { p = Concrete.identity; invp = Concrete.identity }
+
+  let is_identity x =
+    (normalise_aux x).p = Concrete.identity
+
 
   (* Moderately smart constructor (still O(1)) *)
   let invert p =
@@ -404,21 +416,21 @@ struct
     | Inv p ->
       action p point
 
-(* Compute the orbit of a set of elements, and for each point in the
-   orbit, a transversal. Another slower but more compact method would be to
-   use a Schreier tree (i.e. a prefix tree with paths labelled by permutation 
-   words). Storing the full transversal allows for direct access to
-   its elements. 
+  (* Compute the orbit of a set of elements, and for each point in the
+     orbit, a transversal. Another slower but more compact method would be to
+     use a Schreier tree (i.e. a prefix tree with paths labelled by permutation 
+     words). Storing the full transversal allows for direct access to
+     its elements. 
 
-   TODO: possibly more efficient algo, taking advantage of the cycles stored
-   in the perm. Each elt of the cycle corresponds to a particular power of
-   the perm acting on the considered point. This gives for each point and each
-   group element the complete set of all possible transitions to other points.
-   Orbit is then the connected component of a point.
+     TODO: possibly more efficient algo, taking advantage of the cycles stored
+     in the perm. Each elt of the cycle corresponds to a particular power of
+     the perm acting on the considered point. This gives for each point and each
+     group element the complete set of all possible transitions to other points.
+     Orbit is then the connected component of a point.
 
-   NOTE: in the following algo, we forget the orignating point and return
-   only for each point in the orbit the corresponding transversal.
-*)
+     NOTE: in the following algo, we forget the orignating point and return
+     only for each point in the orbit the corresponding transversal.
+  *)
 
   let rec orbit_aux group queue transversal =
     if Queue.is_empty queue then
@@ -433,7 +445,7 @@ struct
          orbit_aux group queue transversal)
           
   let orbit group points =
-    let queue        = Queue.create () in
+    let queue = Queue.create () in
     List.iter (fun point -> Queue.add (point, identity) queue) points;
     orbit_aux group queue IntMap.empty
 
@@ -474,7 +486,7 @@ struct
 
     let _ = Printf.printf "%s\n" (print ab) in
 
-  (* Try some orbit computation *)
+    (* Try some orbit computation *)
 
     let orb = orbit [alpha] [1] in
 

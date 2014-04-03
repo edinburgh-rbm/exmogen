@@ -606,3 +606,8 @@ let reset_timer timer = timer := 0.0
 let get_timer timer   = 
   let t = Unix.gettimeofday () in
   t -. !timer
+
+
+(* Logging *)
+
+let log x = Printf.printf "log: %s\n%!" x

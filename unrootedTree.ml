@@ -216,7 +216,7 @@ struct
       let m = 
         Printf.sprintf 
           "more than 2 minimal indices - something is seriously wrong (%s sz %d)" 
-          (strof_iarr c) 
+          (strof_iarr c)
           (Graph.size tree)
       in
       let _ = to_dot "error.dot" "erroneous" tree (fun clr i ->
@@ -303,7 +303,15 @@ struct
       ((v2, { Graph.clr = clr2; adj = adj2 }), lc2) =
     (LLab.compare lc1 lc2 = 0) && Gram.compatibility clr1 lc1 clr2
       
-  let canonical g = ()
+  let canonical g = failwith "UnrootedTree.canonical: unimplemented"
+
+  let print g = 
+    Graph.print g 
+      (fun nlab id -> NLab.print nlab)
+      LLab.print
+
+  let print_plug ((_, { Graph.clr = clr1; adj = adj1 }), lc1) =
+    Printf.sprintf "[%s -(%s)->]" (NLab.print clr1) (LLab.print lc1)
     
     
 end

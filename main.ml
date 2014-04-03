@@ -142,10 +142,9 @@ let oxygen =
   let g = Unrooted.empty in
   Unrooted.add_node_with_colour g Atom.P
 
-(* Allow 3 carbons and 10 hydrogens (+ the seed) to combine *)
 
 let mset =
-  [ (carbon, 5); (hydrogen, 14) ]
+  [ (carbon, 6); (hydrogen, 14) ]
 
 let timer  = Prelude.create_timer ()
 let _      = Prelude.start_timer timer
@@ -178,45 +177,73 @@ let _ =
 (* -----------------------------
    Test automorphism detection *)
 
-module Auto = Auto.Make
-  (struct type t = int    
-          let compare = compare 
-          let print = string_of_int
-          let inhabited = 0
-   end)
-  (struct type t = string 
-          let compare = String.compare
-          let print x = x
-          let inhabited = ""
-   end)
+(* module Auto = Auto.Make *)
+(*   (struct type t = int     *)
+(*           let compare = compare  *)
+(*           let print = string_of_int *)
+(*           let inhabited = 0 *)
+(*    end) *)
+(*   (struct type t = string  *)
+(*           let compare = String.compare *)
+(*           let print x = x *)
+(*           let inhabited = "" *)
+(*    end) *)
   
-let graph = 
-  let g = Graph.empty in
-  let g = Graph.add_node_with_colour g 1 in
-  let g = Graph.add_node_with_colour g 0 in
-  let g = Graph.add_node_with_colour g 0 in
-  let g = Graph.add_node_with_colour g 0 in
-  let g = Graph.add_edge g 0 "" 1 in
-  let g = Graph.add_edge g 1 "" 2 in
-  let g = Graph.add_edge g 2 "" 3 in
-  Graph.add_edge g 3 "" 0
+(* let graph =  *)
+(*   let g = Graph.empty in *)
+(*   let g = Graph.add_node_with_colour g 1 in *)
+(*   let g = Graph.add_node_with_colour g 0 in *)
+(*   let g = Graph.add_node_with_colour g 0 in *)
+(*   let g = Graph.add_node_with_colour g 0 in *)
+(*   let g = Graph.add_edge g 0 "" 1 in *)
+(*   let g = Graph.add_edge g 1 "" 2 in *)
+(*   let g = Graph.add_edge g 2 "" 3 in *)
+(*   Graph.add_edge g 3 "" 0 *)
 
-let automorphisms = Auto.compute_automorphisms graph
+(* let automorphisms = Auto.compute_automorphisms graph *)
 
-let _ = List.iter (fun x -> Printf.printf "%s\n" (Perm.ArrayBased.print x)) (Prelude.filter_duplicates automorphisms)
+(* let _ = List.iter (fun x -> Printf.printf "%s\n" (Perm.ArrayBased.print x)) (Prelude.filter_duplicates automorphisms) *)
 
-let _ =  
-  Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Auto.auto_count)
+(* let _ =   *)
+(*   Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Auto.auto_count) *)
 
-let _ =  
-  Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Auto.cmlt)
+(* let _ =   *)
+(*   Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Auto.cmlt) *)
 
 
-let t =
-  Perm.CycleBased.of_array [| 1;2;3;4;0 |]
+(*
+let _ =
+  Perm.ArrayBased.size := 3
 
-let t' = Perm.CycleBased.inv t
+module PermTest = Bsgs.Make2(Perm.ArrayBased)
 
-let tt' = Perm.CycleBased.prod t t'
+open PermTest
 
-let _ = Printf.printf "%s\n%!" (Perm.CycleBased.print tt')
+
+let generators = 
+  [ [| 1; 0; 2 |];
+    [| 0; 2; 1 |]
+      
+  ]
+
+let partial_bsgs = compute_partial_subgroup_chain generators
+
+let _ = Prelude.log (print partial_bsgs)
+  
+let _ = schreier_sims_aux partial_bsgs.chain 0
+let _ = Prelude.log "----------"
+let _ = schreier_sims_aux partial_bsgs.chain 1
+
+let _ =
+  let g = (Perm.of_concrete [| 1; 0; 2 |]) in
+  match strip partial_bsgs.chain 1 g with
+  | Ok w ->
+    let w = Prelude.to_sseq Perm.print "." w in 
+    Prelude.log (Printf.sprintf "** for gen %s, decomposition %s" (Perm.print g) w)
+  | DropOut(i, residue) ->
+    Prelude.log (Printf.sprintf "** for gen %s, residue %s at %d" (Perm.print g) (Perm.print residue) i)
+
+(*let _ = schreier_sims_aux partial_bsgs.chain 0*)
+
+let _ = Prelude.log (print partial_bsgs)
+*)

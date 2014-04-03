@@ -2,8 +2,7 @@
    and deals with enumeration of graph-like structures in a nice high-level way. 
 
    We assume that the growable structure handles automorhism detection and everything 
-   nicely and silently.
-*)
+   nicely and silently. *)
 
 module type GrowableType =
   sig
@@ -21,6 +20,10 @@ module type GrowableType =
     val merge : t -> plug -> plug -> t -> t
       
     val compatible : plug -> plug -> bool
+
+    val print : t -> unit
+
+    val print_plug : plug -> string
 
   end
 
@@ -96,7 +99,7 @@ module Enumerate
         if c = 0 then
           pick_one_of_each_class tail mset_acc f acc
         else if c = 1 then
-          pick_one_of_each_class tail mset_acc f (f acc elt (mset_acc @ tail))
+          pick_one_of_each_class tail (x :: mset_acc) f (f acc elt (mset_acc @ tail))
         else
           let acc' = f acc elt ((elt, c - 1) :: mset_acc @ tail) in
           pick_one_of_each_class tail (x :: mset_acc) f acc'
@@ -123,8 +126,7 @@ module Enumerate
               enumerate_old (G.merge seed p pp patt) patterns' acc
             ) acc branches
           ) acc
-        )
-*)
+        ) *)
   (* List.fold_left (fun acc patt -> *)
   (*   let pplugs = G.propose patt in *)
   (*   let branches = pullback plugs pplugs in *)
@@ -133,6 +135,9 @@ module Enumerate
   (*   ) acc branches *)
   (* ) acc patterns *)
 
+    let print_section_dbg s =
+      Prelude.to_sseq G.print_plug ", " s
+            
     let rec enumerate_augmentations (seed : G.t) (word : G.plug list) (patterns : G.t mset) (acc : Canonical.t) =
       match word with
       | [] ->
@@ -142,7 +147,8 @@ module Enumerate
           let pplugs   = G.extend patt in
           let branches = pullback [wplug] pplugs in (* There should be pretty much only one branch *)
           match branches with
-          | [] -> acc
+          | [] ->
+            acc
           | _ ->
             List.fold_left (fun acc (wp, pp) ->
               enumerate_augmentations (G.merge seed wp pp patt) wtail patterns' acc
