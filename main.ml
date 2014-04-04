@@ -1,4 +1,5 @@
 
+(* specify what kind of bindings can exist between atoms or radicals  *)
 module Link =
   struct
 
@@ -15,6 +16,7 @@ module Link =
 
   end
 
+(*  Nodes in the graphs are coloured by C,H,O or P *)
 module Atom =
   struct
 
@@ -32,6 +34,7 @@ module Atom =
 
   end
 
+(* Grammar: specify what can link to what *)
 module Gram =
   struct
     
@@ -52,17 +55,22 @@ module Gram =
 
     let electrons x = electrons 0 x
 
+    (* Specify how many free electrons for each type *)
     let free_electrons = function
       | C -> 4
       | H -> 1
       | O -> 2
       | P -> 1
 
+    (* Specify how much electrons are eaten by each
+       type of bond *)
     let bound_electrons = function
       | Simple -> 1
       | Double -> 2
       | Triple -> 3
 
+    (* Given the current state of a node, this function
+       returns all the admissible bindings *)
     let extension_policy nc llc =
       let c = (free_electrons nc) - (electrons llc) in
       match c with
@@ -73,6 +81,8 @@ module Gram =
       | 4 -> [Simple; Double; Triple]
       | _ -> failwith "Main.extension_policy: inconsistent number of electrons"
 
+    (* Given the current state of a node, this function
+       returns all ways to saturate it. *)
     let saturation_policy nc llc =
       let c = (free_electrons nc) - (electrons llc) in
       match c with
@@ -93,11 +103,56 @@ module Gram =
       | _ -> failwith "Main.saturation_policy: inconsistent number of electrons"
 
 
+    (* This function is where one could forbid e.g.
+       oxygen-oxygen bindings *)
     let compatibility _ _ _ = true
 
   end
 
 
+(* SMILES ad-hoc output -- TODO make this generic *)
+
+
+module NodeIdSet =
+  Set.Make
+    (struct
+      type t      = int
+      let compare (x : int) (y : int) = 
+        if x < y then -1
+        else if x > y then 1
+        else 0
+     end)
+
+(* assuming acyclicity & connectedness *)
+let rec to_smiles g already_explored current_node =
+  if NodeIdSet.mem current_node already_explored then
+    None
+  else    
+    let set = NodeIdSet.add current_node already_explored in
+    let { Graph.clr; adj; deg } = Graph.get_info g current_node in
+    match clr with
+    | Atom.H -> None
+    | Atom.P ->
+      Some "O(P(=O)(O)(O))"
+    | _ ->
+      let str = 
+        List.fold_left (fun acc (bond, target) ->
+          match to_smiles g set target with
+          | None -> acc
+          | Some str ->
+            match bond with
+            | Link.Simple ->
+              Printf.sprintf "%s(%s)" acc str
+            | Link.Double ->
+              Printf.sprintf "%s=(%s)" acc str
+            | Link.Triple ->
+              Printf.sprintf "%s#(%s)" acc str
+        ) (Atom.print clr) adj
+      in
+      Some str
+        
+(* Instantiate the exhaustive generators with the particular modules
+   given above *)
 module Unrooted = UnrootedTree.Make(Atom)(Link)(Gram)
 
 module Canon =
@@ -115,6 +170,35 @@ module Canon =
   end
 
 module G = Growable.Enumerate(Unrooted)(Canon)
+
+
+let to_smiles =
+  let open Unrooted.R in
+  let rec aux tree =
+    match tree with
+    | ECNode(x, cs) ->
+      match x with
+      | Atom.H -> None
+      | Atom.P -> Some "O(P(=O)(O)(O))"
+      | _ ->
+        let str = 
+          List.fold_left (fun acc (bond, target) ->
+            match aux target with
+            | None -> acc
+            | Some str ->
+              match bond with
+              | Link.Simple ->
+                Printf.sprintf "%s(%s)" acc str
+              | Link.Double ->
+                Printf.sprintf "%s=(%s)" acc str
+              | Link.Triple ->
+                Printf.sprintf "%s#(%s)" acc str
+          ) (Atom.print x) cs
+        in
+        Some str
+  in
+  aux
+
 
 (* start from a single carbon *)
 let seed =
@@ -142,23 +226,31 @@ let oxygen =
   let g = Unrooted.empty in
   Unrooted.add_node_with_colour g Atom.P
 
-
+(* We allow to graft up to & carbons and 16 hydrogens on the seed *)
 let mset =
-  [ (carbon, 6); (hydrogen, 14) ]
+  [ (carbon, 6); (hydrogen, 16) ]
 
 let timer  = Prelude.create_timer ()
 let _      = Prelude.start_timer timer
     
+(* Peform the actual enumeration *)
 let result = G.enumerate seed mset G.Canonical.empty
 
 let time   = Prelude.get_timer timer
 
 let result = G.Canonical.elements result
 
-let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) result
+let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) result 
+(* let _ = List.iter (Printf.printf "%s\n" ) s *)
 
-let _ = List.iter (Printf.printf "%s\n" ) s
 
+let _ =
+  List.iter (fun (g, _) -> 
+    match to_smiles (Unrooted.root g 0) with 
+    | None   -> () 
+    | Some s -> 
+      Printf.printf "%s\n" s
+  ) result
 
 let _ =  
   Printf.printf "generation time: %f seconds\n" time
@@ -168,6 +260,11 @@ let _ =
 
 let _ =  
   Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Unrooted.Auto.auto_count)
+
+
+
+
+(* What follows is debugging code, do not read *)
 
 (*
 let _ = 
