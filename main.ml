@@ -105,13 +105,14 @@ module Gram =
 
     (* This function is where one could forbid e.g.
        oxygen-oxygen bindings *)
-    let compatibility _ _ _ = true
+    let compatibility nc lc nc' =
+      match nc, nc' with
+      | O, O -> false
+      | _    -> true
 
   end
 
-
 (* SMILES ad-hoc output -- TODO make this generic *)
-
 
 module NodeIdSet =
   Set.Make
@@ -144,9 +145,9 @@ let rec to_smiles g already_explored current_node =
             | Link.Simple ->
               Printf.sprintf "%s(%s)" acc str
             | Link.Double ->
-              Printf.sprintf "%s=(%s)" acc str
+              Printf.sprintf "%s(=%s)" acc str
             | Link.Triple ->
-              Printf.sprintf "%s#(%s)" acc str
+              Printf.sprintf "%s(#%s)" acc str
         ) (Atom.print clr) adj
       in
       Some str
@@ -171,7 +172,6 @@ module Canon =
 
 module G = Growable.Enumerate(Unrooted)(Canon)
 
-
 let to_smiles =
   let open Unrooted.R in
   let rec aux tree =
@@ -179,7 +179,7 @@ let to_smiles =
     | ECNode(x, cs) ->
       match x with
       | Atom.H -> None
-      | Atom.P -> Some "O(P(=O)(O)(O))"
+      | Atom.P -> Some "P"
       | _ ->
         let str = 
           List.fold_left (fun acc (bond, target) ->
@@ -190,9 +190,9 @@ let to_smiles =
               | Link.Simple ->
                 Printf.sprintf "%s(%s)" acc str
               | Link.Double ->
-                Printf.sprintf "%s=(%s)" acc str
+                Printf.sprintf "%s(=%s)" acc str
               | Link.Triple ->
-                Printf.sprintf "%s#(%s)" acc str
+                Printf.sprintf "%s(#%s)" acc str
           ) (Atom.print x) cs
         in
         Some str
@@ -222,13 +222,13 @@ let oxygen =
   Unrooted.add_node_with_colour g Atom.O
 
 (* phosphate pattern *)
-let oxygen =
+let phosphate =
   let g = Unrooted.empty in
   Unrooted.add_node_with_colour g Atom.P
 
 (* We allow to graft up to & carbons and 16 hydrogens on the seed *)
 let mset =
-  [ (carbon, 6); (hydrogen, 16) ]
+  [ (carbon, 3); (hydrogen, 10); (oxygen, 4); (phosphate, 4); ]
 
 let timer  = Prelude.create_timer ()
 let _      = Prelude.start_timer timer
