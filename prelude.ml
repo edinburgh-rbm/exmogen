@@ -90,7 +90,7 @@ let sections l =
   sections l [[]]
 
 
-(* Integer map *)
+(* Integer map, implemented as in Ocaml stdlib *)
 
 module IntMap =
 struct
@@ -427,15 +427,16 @@ struct
 
   let choose = min_elt
 
-  (* let rec fold2 f s1 s2 accu = *)
-  (*   match s1, s2 with *)
-  (*   | Empty, Empty ->  *)
-  (*     accu *)
-  (*   | Node(l1, v1, r1, _), Node(l2, v2, r2, _) -> *)
-  (*     fold2 f r1 r2 (f v1 v2 (fold2 f l1 l2 accu)) *)
-  (*   | _ -> failwith "" *)
-        
+(* let rec fold2 f s1 s2 accu = *)
+(*   match s1, s2 with *)
+(*   | Empty, Empty ->  *)
+(*     accu *)
+(*   | Node(l1, v1, r1, _), Node(l2, v2, r2, _) -> *)
+(*     fold2 f r1 r2 (f v1 v2 (fold2 f l1 l2 accu)) *)
+(*   | _ -> failwith "" *)
+    
 end
+
 
 (* Multiset *)
 module Multiset(O : Ordered) =

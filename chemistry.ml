@@ -3,9 +3,6 @@
 
 
 
-
-
-
 (* -------------------------------------------------------------------------- *)
 (* Specification of the CHOP chemistry *)
 (* -------------------------------------------------------------------------- *)
@@ -34,14 +31,18 @@ module Link =
 (*  Nodes in the graphs are coloured by C,H,O or P *)
 module Atom =
   struct
+    
+    type atom = C | H | O | P
 
-    type t = C | H | O | P
+    type t = { atom  : atom;
+               arity : int  }
 
     let compare (x : t) (y : t) = compare x y
 
-    let inhabited = C
+    let inhabited = { atom = C; arity = 4 }
 
-    let print = function
+    let print { atom } =
+      match atom with
       | C -> "C"
       | H -> "H"
       | O -> "O"
@@ -72,11 +73,7 @@ module Gram =
     let electrons x = electrons 0 x
 
     (* Specify how many free electrons for each type *)
-    let free_electrons = function
-      | C -> 4
-      | H -> 1
-      | O -> 2
-      | P -> 1
+    let free_electrons { arity } = arity
 
     (* Specify how much electrons are eaten by each
        type of bond *)
@@ -98,7 +95,9 @@ module Gram =
       | _ -> failwith "Main.extension_policy: inconsistent number of electrons"
 
     (* Given the current state of a node, this function
-       returns all ways to saturate it. *)
+       returns all ways to saturate it. This function could
+       in theory be automatically generated from
+       extension_policy and a maximum number of electrons. *)
     let saturation_policy nc llc =
       let c = (free_electrons nc) - (electrons llc) in
       match c with
@@ -121,10 +120,12 @@ module Gram =
 
     (* This function is where one could forbid e.g.
        oxygen-oxygen bindings *)
-    let compatibility nc lc nc' =
+    let compatibility { atom = nc } lc { atom = nc' } =
       match nc, lc, nc' with
       | O, _,      O
       | O, _,      P
+      (* TODO test *)
+      | P, _,      O
       | C, Triple, C   -> false
       | _              -> true
 
@@ -199,7 +200,7 @@ let to_smiles =
   let rec aux tree =
     match tree with
     | ECNode(x, cs) ->
-      match x with
+      match x.Atom.atom with
       | Atom.H -> None
       | Atom.P -> Some "P"
       | _ ->
@@ -227,17 +228,56 @@ let to_smiles =
 (* A reaction scheme is given by a reaction input, a reaction output and
    an (injective) mapping from input stubs to output stubs. If everything
    is to make sense, the mapping should in fact be bijective. *)
-type scheme = 
+type scheme =
   { input   : Molecule.t;
     output  : Molecule.t;
-    mapping : int array
+    mapping : (int * int) list
   }
 
+(* Given a node, returns its "signature", which uniquely identifies
+   the set of its possible extensions. *)
+let node_extension_signature (info : (Atom.t, Link.t) Graph.info) =
+  let nc   = info.Graph.clr in
+  let llc  = List.map fst info.Graph.adj in
+  let free = (Gram.free_electrons nc) - (Gram.electrons llc) in
+  { nc with Atom.arity = free}
+ 
+
+(* Extract all "grafting points" a.k.a. "seeds" from list of reaction schemes.
+   We only need to generate possible instantiations once for each "seed". *)
+let extract_seeds schemes =
+  let rec loop schemes acc =
+    match schemes with
+    | [] -> acc
+    | { input; mapping } :: tail ->
+      List.fold_left (fun acc (seed, _) ->
+        let info = Graph.get_info input seed in
+        (node_extension_signature info) :: acc
+      ) acc mapping
+  in
+  let seeds = loop schemes [] in
+  Prelude.filter_duplicates seeds
+  
+
 (* The process of instantiation takes as inputs a reaction scheme and
-   a multiset of components with which to extend the scheme.input.
-   For each complete extension of the scheme.input, a matching scheme.output 
+   a multiset of components with which to extend the scheme.input into
+   a complete input. Complete inputs are generated in two stages: first
+   we generate once and for all all possible completions of all "seeds",
+   i.e. all completions for each kind of grafting point. This avoids
+   regenerating completions each time. Then we enumerate all combinations
+   of inputs by (roughly) computing a cartesian product of completions.
+   We have to check for isomorphism again while doing that.
+
+   For each complete extension of the scheme.input, a matching scheme.output
    is automatically computed. The reaction is marshalled into an efficient
    representation (effectively mapping molecules to unique integers) and
    the whole list is written in a file. *)
-let instantiate schemes multiset =
-  
+
+let instantiate_schemes schemes multiset =
+  let seeds = extract_seeds schemes in
+  let seed_table = List.map (fun atom ->
+    let m = Molecule.empty in
+    let n = Molecule.add_node_with_colour m atom in
+    (atom, Generator.enumerate n multiset Generator.Canonical.empty)
+  ) seeds in
+  seed_table

@@ -4,4 +4,4 @@
 
 # ocamlopt -g -o main -annot unix.cmxa dllist.ml bitv.ml prelude.ml rootedTree.ml matrix.ml group.ml perm.ml bsgs.ml graph.ml auto.ml unrootedTree.ml growable.ml main.ml
 
-ocamlopt -inline 50 -o main -annot unix.cmxa prelude.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml main.ml
+ocamlopt -inline 50 -o main -annot unix.cmxa prelude.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml chemistry.ml main.ml

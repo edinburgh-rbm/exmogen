@@ -269,7 +269,7 @@ struct
   (* Compute the disjoint union of two graphs. This implies shifting the nodes
      ids of graph2 by graph1.size. TODO incremental update of canonical root *)
   let disjoint_union g1 g2 =
-    let shift  = (Graph.size g1) in
+    let shift  = Graph.size g1 in
     (* add up nodes *)
     let info = Graph.NodeIdMap.fold (fun id2 { Graph.clr; adj; deg } map1 ->
       (* shift neighbour relationship *)

@@ -1,148 +1,25 @@
+open Chemistry
 
-
-(* start from a single carbon *)
-let seed =
-  let g = Unrooted.empty in
-  Unrooted.add_node_with_colour g Atom.C
-
+let c = Atom.({ atom = C; arity = 4 })
+let h = Atom.({ atom = H; arity = 1 })
 
 (* carbon pattern *)
-let carbon =
-  let g = Unrooted.empty in
-  Unrooted.add_node_with_colour g Atom.C
+let carbon : Molecule.t =
+  let g = Molecule.empty in
+  Molecule.add_node_with_colour g c
 
 (* hydrogen pattern *)
-let hydrogen =
-  let g = Unrooted.empty in
-  Unrooted.add_node_with_colour g Atom.H
+let hydrogen : Molecule.t =
+  let g = Molecule.empty in
+  Molecule.add_node_with_colour g h
 
-(* oxygen pattern *)
-let oxygen =
-  let g = Unrooted.empty in
-  Unrooted.add_node_with_colour g Atom.O
+let seed = carbon
 
-(* phosphate pattern *)
-let phosphate =
-  let g = Unrooted.empty in
-  Unrooted.add_node_with_colour g Atom.P
-
-let (>>=) g f = fun x -> f g x
-
-(* -CH3 *)
-let ch3 =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  let g = Graph.add_edge g 0 Link.Simple 2 in
-  Graph.add_edge g 0 Link.Simple 3
-
-let ch2p =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.P in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  let g = Graph.add_edge g 0 Link.Simple 2 in
-  Graph.add_edge g 0 Link.Simple 3
-
-let ch2oh =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  let g = Graph.add_edge g 0 Link.Simple 2 in
-  let g = Graph.add_edge g 0 Link.Simple 3 in
-  Graph.add_edge g 3 Link.Simple 4
-
-let cooh =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Graph.add_edge g 0 Link.Double 1 in
-  let g = Graph.add_edge g 0 Link.Simple 2 in
-  Graph.add_edge g 2 Link.Simple 3
-    
-let cho =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  Graph.add_edge g 0 Link.Double 2
-
-let cop =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Unrooted.add_node_with_colour g Atom.P in
-  let g = Graph.add_edge g 0 Link.Double 1 in
-  Graph.add_edge g 0 Link.Simple 2
-
-let ch2 =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  Graph.add_edge g 0 Link.Simple 2
-
-let ch_oh =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  let g = Graph.add_edge g 0 Link.Simple 2 in
-  Graph.add_edge g 2 Link.Simple 3
-
-let co =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  Graph.add_edge g 0 Link.Double 1
-
-let chp =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Unrooted.add_node_with_colour g Atom.P in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  Graph.add_edge g 0 Link.Simple 2
-
-let ch =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  Graph.add_edge g 0 Link.Simple 1
-
-let c_oh =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.O in
-  let g = Unrooted.add_node_with_colour g Atom.H in
-  let g = Graph.add_edge g 0 Link.Simple 1 in
-  Graph.add_edge g 1 Link.Simple 2
-
-let cp =
-  let g = Unrooted.empty in
-  let g = Unrooted.add_node_with_colour g Atom.C in
-  let g = Unrooted.add_node_with_colour g Atom.P in
-  Graph.add_edge g 0 Link.Simple 1
-
-let mset =
-  [ (*(carbon, 0); *)
-    (ch3, 4);
-    (ch2p, 4); ]
+let mset : Molecule.t Generator.mset =
+  [ (carbon, 8);
+    (hydrogen, 20) ]
+    (* (ch3, 4); *)
+    (* (ch2p, 4); ] *)
     (* (ch2oh, 1); *)
     (* (cooh, 1); *)
     (* (cho, 1); *)
@@ -155,42 +32,207 @@ let mset =
     (* (c_oh, 1); *)
     (* (cp, 1) ] *)
 
-(*
--CH=    -C(OH)=    -CP=
-=C=
-*)
+let result = Generator.enumerate seed mset Generator.Canonical.empty
+let result = Generator.Canonical.elements result
 
-(* We allow to graft up to & carbons and 16 hydrogens on the seed *)
-(*
-let mset =
-  [ (carbon, 3); (hydrogen, 10); (oxygen, 4); (phosphate, 4); ]
-*)
+let s = List.map (fun (res, _) ->  Molecule.R.print (Molecule.root res 0)) result
+let _ = List.iter (Printf.printf "%s\n" ) s
 
 
-let timer  = Prelude.create_timer ()
-let _      = Prelude.start_timer timer
+
+(* let _ = *)
+(*   List.iter (fun (g, _) ->  *)
+(*     match to_smiles (Unrooted.root g 0) with  *)
+(*     | None   -> ()  *)
+(*     | Some s ->  *)
+(*       Printf.printf "%s\n" s *)
+(*   ) result *)
+
+
+(* let time   = Prelude.get_timer timer *)
+
+(* let result = G.Canonical.elements result *)
+
+(* (\* hydrogen pattern *\) *)
+(* let hydrogen = *)
+(*   let g = Unrooted.empty in *)
+(*   Unrooted.add_node_with_colour g Atom.H *)
+
+(* (\* oxygen pattern *\) *)
+(* let oxygen = *)
+(*   let g = Unrooted.empty in *)
+(*   Unrooted.add_node_with_colour g Atom.O *)
+
+(* (\* phosphate pattern *\) *)
+(* let phosphate = *)
+(*   let g = Unrooted.empty in *)
+(*   Unrooted.add_node_with_colour g Atom.P *)
+
+(* let (>>=) g f = fun x -> f g x *)
+
+(* (\* -CH3 *\) *)
+(* let ch3 = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 2 in *)
+(*   Graph.add_edge g 0 Link.Simple 3 *)
+
+(* let ch2p = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.P in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 2 in *)
+(*   Graph.add_edge g 0 Link.Simple 3 *)
+
+(* let ch2oh = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 2 in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 3 in *)
+(*   Graph.add_edge g 3 Link.Simple 4 *)
+
+(* let cooh = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Graph.add_edge g 0 Link.Double 1 in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 2 in *)
+(*   Graph.add_edge g 2 Link.Simple 3 *)
     
-(* Peform the actual enumeration *)
-let result = G.enumerate seed mset G.Canonical.empty
+(* let cho = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   Graph.add_edge g 0 Link.Double 2 *)
 
-let time   = Prelude.get_timer timer
+(* let cop = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.P in *)
+(*   let g = Graph.add_edge g 0 Link.Double 1 in *)
+(*   Graph.add_edge g 0 Link.Simple 2 *)
 
-let result = G.Canonical.elements result
+(* let ch2 = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   Graph.add_edge g 0 Link.Simple 2 *)
 
-let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) result 
-(* let _ = List.iter (Printf.printf "%s\n" ) s *)
+(* let ch_oh = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 2 in *)
+(*   Graph.add_edge g 2 Link.Simple 3 *)
+
+(* let co = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   Graph.add_edge g 0 Link.Double 1 *)
+
+(* let chp = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.P in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   Graph.add_edge g 0 Link.Simple 2 *)
+
+(* let ch = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   Graph.add_edge g 0 Link.Simple 1 *)
+
+(* let c_oh = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.O in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.H in *)
+(*   let g = Graph.add_edge g 0 Link.Simple 1 in *)
+(*   Graph.add_edge g 1 Link.Simple 2 *)
+
+(* let cp = *)
+(*   let g = Unrooted.empty in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.C in *)
+(*   let g = Unrooted.add_node_with_colour g Atom.P in *)
+(*   Graph.add_edge g 0 Link.Simple 1 *)
+
+(* let mset = *)
+(*   [ (\*(carbon, 0); *\) *)
+(*     (ch3, 4); *)
+(*     (ch2p, 4); ] *)
+(*     (\* (ch2oh, 1); *\) *)
+(*     (\* (cooh, 1); *\) *)
+(*     (\* (cho, 1); *\) *)
+(*     (\* (cop, 1); *\) *)
+(*     (\* (ch2, 1); *\) *)
+(*     (\* (ch_oh, 1); *\) *)
+(*     (\* (co, 1); *\) *)
+(*     (\* (chp, 1); *\) *)
+(*     (\* (ch, 1); *\) *)
+(*     (\* (c_oh, 1); *\) *)
+(*     (\* (cp, 1) ] *\) *)
+
+(* (\* *)
+(* -CH=    -C(OH)=    -CP= *)
+(* =C= *)
+(* *\) *)
+
+(* (\* We allow to graft up to & carbons and 16 hydrogens on the seed *\) *)
+(* (\* *)
+(* let mset = *)
+(*   [ (carbon, 3); (hydrogen, 10); (oxygen, 4); (phosphate, 4); ] *)
+(* *\) *)
 
 
-let _ =
-  List.iter (fun (g, _) -> 
-    match to_smiles (Unrooted.root g 0) with 
-    | None   -> () 
-    | Some s -> 
-      Printf.printf "%s\n" s
-  ) result
+(* let timer  = Prelude.create_timer () *)
+(* let _      = Prelude.start_timer timer *)
+    
+(* (\* Peform the actual enumeration *\) *)
+(* let result = G.enumerate seed mset G.Canonical.empty *)
 
-let _ =  
-  Printf.printf "generation time: %f seconds\n" time
+(* let time   = Prelude.get_timer timer *)
+
+(* let result = G.Canonical.elements result *)
+
+(* let s = List.map (fun (res, _) ->  Unrooted.R.print (Unrooted.root res 0)) result  *)
+(* (\* let _ = List.iter (Printf.printf "%s\n" ) s *\) *)
+
+
+(* let _ = *)
+(*   List.iter (fun (g, _) ->  *)
+(*     match to_smiles (Unrooted.root g 0) with  *)
+(*     | None   -> ()  *)
+(*     | Some s ->  *)
+(*       Printf.printf "%s\n" s *)
+(*   ) result *)
+
+(* let _ =   *)
+(*   Printf.printf "generation time: %f seconds\n" time *)
 
 (* let _ =   *)
 (*   Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Unrooted.Auto.cmlt) *)
