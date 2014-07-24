@@ -46,10 +46,6 @@ module Make
   =
 struct  
 
-  (* ---------------------------------- *)
-  (* Instantiate automorphism detection *)
-  module Auto = Auto.Make(NLab)(LLab)
-
 
   (* ---------------- *)
   (* Type definitions *)

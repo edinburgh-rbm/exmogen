@@ -530,16 +530,16 @@ let rec take_until queue pred =
       take_until queue pred
 
 (* Stuff on dllists *)
-let rec dllist_of_array array =
-  if Array.length array = 0 then
-    failwith "Prelude.dllist_of_array: empty array"
-  else
-    let node = Dllist.create array.(0) in
-    let acc  = ref node in
-    for i = 1 to Array.length array - 1 do
-      acc := Dllist.append !acc array.(i)
-    done;
-    node
+(* let rec dllist_of_array array = *)
+(*   if Array.length array = 0 then *)
+(*     failwith "Prelude.dllist_of_array: empty array" *)
+(*   else *)
+(*     let node = Dllist.create array.(0) in *)
+(*     let acc  = ref node in *)
+(*     for i = 1 to Array.length array - 1 do *)
+(*       acc := Dllist.append !acc array.(i) *)
+(*     done; *)
+(*     node *)
 
 (* Subarray module: accessing a contiguous subset of an array *)
 module Subarray =

@@ -106,9 +106,11 @@ module Gram =
     (* This function is where one could forbid e.g.
        oxygen-oxygen bindings *)
     let compatibility nc lc nc' =
-      match nc, nc' with
-      | O, O -> false
-      | _    -> true
+      match nc, lc, nc' with
+      | O, _,      O
+      | O, _,      P
+      | C, Triple, C   -> false
+      | _              -> true
 
   end
 
@@ -128,7 +130,7 @@ module NodeIdSet =
 let rec to_smiles g already_explored current_node =
   if NodeIdSet.mem current_node already_explored then
     None
-  else    
+  else
     let set = NodeIdSet.add current_node already_explored in
     let { Graph.clr; adj; deg } = Graph.get_info g current_node in
     match clr with
@@ -226,9 +228,146 @@ let phosphate =
   let g = Unrooted.empty in
   Unrooted.add_node_with_colour g Atom.P
 
+let (>>=) g f = fun x -> f g x
+
+(* -CH3 *)
+let ch3 =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  let g = Graph.add_edge g 0 Link.Simple 2 in
+  Graph.add_edge g 0 Link.Simple 3
+
+let ch2p =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.P in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  let g = Graph.add_edge g 0 Link.Simple 2 in
+  Graph.add_edge g 0 Link.Simple 3
+
+let ch2oh =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  let g = Graph.add_edge g 0 Link.Simple 2 in
+  let g = Graph.add_edge g 0 Link.Simple 3 in
+  Graph.add_edge g 3 Link.Simple 4
+
+let cooh =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Graph.add_edge g 0 Link.Double 1 in
+  let g = Graph.add_edge g 0 Link.Simple 2 in
+  Graph.add_edge g 2 Link.Simple 3
+    
+let cho =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  Graph.add_edge g 0 Link.Double 2
+
+let cop =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Unrooted.add_node_with_colour g Atom.P in
+  let g = Graph.add_edge g 0 Link.Double 1 in
+  Graph.add_edge g 0 Link.Simple 2
+
+let ch2 =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  Graph.add_edge g 0 Link.Simple 2
+
+let ch_oh =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  let g = Graph.add_edge g 0 Link.Simple 2 in
+  Graph.add_edge g 2 Link.Simple 3
+
+let co =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  Graph.add_edge g 0 Link.Double 1
+
+let chp =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Unrooted.add_node_with_colour g Atom.P in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  Graph.add_edge g 0 Link.Simple 2
+
+let ch =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  Graph.add_edge g 0 Link.Simple 1
+
+let c_oh =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.O in
+  let g = Unrooted.add_node_with_colour g Atom.H in
+  let g = Graph.add_edge g 0 Link.Simple 1 in
+  Graph.add_edge g 1 Link.Simple 2
+
+let cp =
+  let g = Unrooted.empty in
+  let g = Unrooted.add_node_with_colour g Atom.C in
+  let g = Unrooted.add_node_with_colour g Atom.P in
+  Graph.add_edge g 0 Link.Simple 1
+
+let mset =
+  [ (*(carbon, 0); *)
+    (ch3, 4);
+    (ch2p, 4); ]
+    (* (ch2oh, 1); *)
+    (* (cooh, 1); *)
+    (* (cho, 1); *)
+    (* (cop, 1); *)
+    (* (ch2, 1); *)
+    (* (ch_oh, 1); *)
+    (* (co, 1); *)
+    (* (chp, 1); *)
+    (* (ch, 1); *)
+    (* (c_oh, 1); *)
+    (* (cp, 1) ] *)
+
+(*
+-CH=    -C(OH)=    -CP=
+=C=
+*)
+
 (* We allow to graft up to & carbons and 16 hydrogens on the seed *)
+(*
 let mset =
   [ (carbon, 3); (hydrogen, 10); (oxygen, 4); (phosphate, 4); ]
+*)
+
 
 let timer  = Prelude.create_timer ()
 let _      = Prelude.start_timer timer
@@ -255,14 +394,11 @@ let _ =
 let _ =  
   Printf.printf "generation time: %f seconds\n" time
 
-let _ =  
-  Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Unrooted.Auto.cmlt)
+(* let _ =   *)
+(*   Printf.printf "cumultative time spent in automorphism computation: %f seconds\n" (!Unrooted.Auto.cmlt) *)
 
-let _ =  
-  Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Unrooted.Auto.auto_count)
-
-
-
+(* let _ =   *)
+(*   Printf.printf "number of automorphism checks: %s\n" (Int64.to_string !Unrooted.Auto.auto_count) *)
 
 (* What follows is debugging code, do not read *)
 
