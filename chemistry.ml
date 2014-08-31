@@ -2,11 +2,9 @@
    reactions. We handle tree-like CHOP molecules. *)
 
 
-
 (* -------------------------------------------------------------------------- *)
 (* Specification of the CHOP chemistry *)
 (* -------------------------------------------------------------------------- *)
-
 
 
 (* -------------------------------------------------------------------------- *)
@@ -33,7 +31,7 @@ module Atom =
   struct
     
     type atom = C | H | O | P
-
+        
     type t = { atom  : atom;
                arity : int  }
 
@@ -123,8 +121,7 @@ module Gram =
     let compatibility { atom = nc } lc { atom = nc' } =
       match nc, lc, nc' with
       | O, _,      O
-      | O, _,      P
-      (* TODO test *)
+      | O, _,      P   (* TODO test *)
       | P, _,      O
       | C, Triple, C   -> false
       | _              -> true
@@ -225,24 +222,25 @@ let to_smiles =
 (* -------------------------------------------------------------------------- *)
 (* Reaction instantiation *)
 
+type vertex_digest = Graph.vertex * Atom.t
+
 (* A reaction scheme is given by a reaction input, a reaction output and
    an (injective) mapping from input stubs to output stubs. If everything
    is to make sense, the mapping should in fact be bijective. *)
-type scheme =
+type reaction =
   { input   : Molecule.t;
     output  : Molecule.t;
-    mapping : (int * int) list
+    mapping : (Graph.vertex * Graph.vertex) list
   }
 
 (* Given a node, returns its "signature", which uniquely identifies
    the set of its possible extensions. *)
-let node_extension_signature (info : (Atom.t, Link.t) Graph.info) =
+let typeof (info : (Atom.t, Link.t) Graph.info) =
   let nc   = info.Graph.clr in
   let llc  = List.map fst info.Graph.adj in
   let free = (Gram.free_electrons nc) - (Gram.electrons llc) in
   { nc with Atom.arity = free}
- 
-
+    
 (* Extract all "grafting points" a.k.a. "seeds" from list of reaction schemes.
    We only need to generate possible instantiations once for each "seed". *)
 let extract_seeds schemes =
@@ -252,32 +250,46 @@ let extract_seeds schemes =
     | { input; mapping } :: tail ->
       List.fold_left (fun acc (seed, _) ->
         let info = Graph.get_info input seed in
-        (node_extension_signature info) :: acc
+        (typeof info) :: acc
       ) acc mapping
   in
   let seeds = loop schemes [] in
   Prelude.filter_duplicates seeds
-  
 
-(* The process of instantiation takes as inputs a reaction scheme and
-   a multiset of components with which to extend the scheme.input into
-   a complete input. Complete inputs are generated in two stages: first
-   we generate once and for all all possible completions of all "seeds",
-   i.e. all completions for each kind of grafting point. This avoids
-   regenerating completions each time. Then we enumerate all combinations
-   of inputs by (roughly) computing a cartesian product of completions.
-   We have to check for isomorphism again while doing that.
+(* Molecule.t list -> Molecule.t Generator.mset -> (Molecule.t * Generator.Canonical.t) list *)
+let saturate_all_seeds seeds mset =
+  List.map (fun seed ->
+    let molseed = Molecule.add_node_with_colour Molecule.empty seed in
+    let completions = Generator.enumerate molseed mset Generator.Canonical.empty in
+    (seed, completions)
+  ) seeds
 
-   For each complete extension of the scheme.input, a matching scheme.output
-   is automatically computed. The reaction is marshalled into an efficient
-   representation (effectively mapping molecules to unique integers) and
-   the whole list is written in a file. *)
+let instantiate_scheme seeds { input; output; mapping } =
+  Prelude.fold_fsection
+    (fun (vin, _) -> 
+      let set    = List.assoc (typeof (Graph.get_info input vin)) seeds in
+      Generator.Canonical.elements set
+    )
+    (fun (vin, vout) (graphtling, _) (input, output) -> 
+      let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
+      let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
+      (input, output)
+    )
+    (fun (input, output) acc -> { input; output; mapping } :: acc)
+    mapping
+    (input, output)
+    []
 
-let instantiate_schemes schemes multiset =
+let instantiate_schemes schemes ingredients =
   let seeds = extract_seeds schemes in
-  let seed_table = List.map (fun atom ->
-    let m = Molecule.empty in
-    let n = Molecule.add_node_with_colour m atom in
-    (atom, Generator.enumerate n multiset Generator.Canonical.empty)
-  ) seeds in
-  seed_table
+  let sat   = saturate_all_seeds seeds ingredients in
+  List.map (instantiate_scheme sat) schemes
+
+(* let instantiate_schemes schemes multiset = *)
+(*   let seeds = extract_seeds schemes in *)
+(*   let seed_table = List.map (fun atom -> *)
+(*     let m = Molecule.empty in *)
+(*     let n = Molecule.add_node_with_colour m atom in *)
+(*     (atom, Generator.enumerate n multiset Generator.Canonical.empty) *)
+(*   ) seeds in *)
+(*   seed_table *)

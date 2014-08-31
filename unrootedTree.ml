@@ -51,7 +51,7 @@ struct
   (* Type definitions *)
 
   (* An insertion point onto the graph *)
-  type plug = (int * (NLab.t, LLab.t) Graph.info) * LLab.t
+  type plug = Graph.vertex * NLab.t * (LLab.t * Graph.vertex) list * LLab.t
 
   type t = (NLab.t, LLab.t) Graph.t
 
@@ -106,11 +106,13 @@ struct
 
   let compute_adjacency_matrix a graph =
     for i = 0 to Array.length a - 1 do
-      let n = Graph.get_neighbours graph i in
-      let n = List.filter (fun (_,x) -> x > i) n in
-      List.iter (fun (_, j) ->
-        a.(i).(j) <- 1;
-        a.(j).(i) <- 1
+      let vi = Graph.v_of_int i in
+      let n  = Graph.get_neighbours graph vi in
+      List.iter (fun (_, vj) -> 
+        let j = Graph.v_to_int vj in
+        if j > i then
+          (a.(i).(j) <- 1;
+           a.(j).(i) <- 1)
       ) n
     done
 
@@ -198,10 +200,13 @@ struct
     | [] ->
       failwith "less than 1 minimal indices - something is seriously wrong"
     | [x] ->
-      (x, R.Encoded.sort (R.to_ronc (root tree x)))
+      let vx = Graph.v_of_int x in
+      (x, R.Encoded.sort (R.to_ronc (root tree vx)))
     | [x; y] ->
-      let rx = R.Encoded.sort (R.to_ronc (root tree x)) in
-      let ry = R.Encoded.sort (R.to_ronc (root tree y)) in
+      let vx = Graph.v_of_int x in
+      let vy = Graph.v_of_int y in
+      let rx = R.Encoded.sort (R.to_ronc (root tree vx)) in
+      let ry = R.Encoded.sort (R.to_ronc (root tree vy)) in
       let c  = R.Encoded.tree_compare rx ry in
       if c = 1 then
         (y, ry)
@@ -215,7 +220,8 @@ struct
           (strof_iarr c)
           (Graph.size tree)
       in
-      let _ = to_dot "error.dot" "erroneous" tree (fun clr i ->
+      let _ = to_dot "error.dot" "erroneous" tree (fun clr vi ->
+        let i = Graph.v_to_int vi in
         Printf.sprintf "\"%i = %s/%d\"" i (NLab.print clr) c.(i)
       )
       in
@@ -227,18 +233,20 @@ struct
   let extend : t -> plug list =
     fun graph ->
       Graph.NodeIdMap.fold (fun v i acc ->
-        let (v, { Graph.clr; adj }) as info = (v, i) in
+        let clr = i.Graph.clr in
+        let adj = i.Graph.adj in
         let links = Gram.extension_policy clr (List.map fst adj) in
-        List.fold_left (fun acc lc -> (info, lc) :: acc) acc links
+        List.fold_left (fun acc lc -> (v, clr, adj, lc) :: acc) acc links
       ) (Graph.info graph) []
 
   let saturate : t -> plug list list =
     fun graph ->
       let result = 
         Graph.NodeIdMap.fold (fun v i acc ->
-          let (v, { Graph.clr; adj }) as info = (v, i) in
+          let clr = i.Graph.clr in
+          let adj = i.Graph.adj in
           let links = Gram.saturation_policy clr (List.map fst adj) in
-          (List.map (List.map (fun lc -> (info, lc))) links) :: acc
+          (List.map (List.map (fun lc -> (v, clr, adj, lc))) links) :: acc
         ) (Graph.info graph) []
       in
       Prelude.sections result
@@ -268,6 +276,9 @@ struct
 
   (* Compute the disjoint union of two graphs. This implies shifting the nodes
      ids of graph2 by graph1.size. TODO incremental update of canonical root *)
+  let add x d = 
+    Graph.v_of_int (Graph.v_to_int x + d)
+
   let disjoint_union g1 g2 =
     let shift  = Graph.size g1 in
     (* add up nodes *)
@@ -275,28 +286,26 @@ struct
       (* shift neighbour relationship *)
       let info2 = { Graph.clr;
                     deg;
-                    adj = (List.map (fun (lc, id2') -> (lc, id2' + shift)) adj) 
+                    adj = (List.map (fun (lc, id2') -> (lc, add id2' shift)) adj) 
                   } 
       in
-      Graph.NodeIdMap.add (id2 + shift) info2 map1
+      Graph.NodeIdMap.add (add id2 shift) info2 map1
     ) (Graph.info g2) (Graph.info g1) in
     { Graph.size = (Graph.size g1) + (Graph.size g2);
       info;
-      (*buds = g1.buds @ buds2; *)
-      root = (Graph.root g1)
     }
 
   (* TODO: incremental update of canonical root *)
-  let merge g1 plug1 plug2 g2 =
+  let merge g1 (plug1 : plug) (plug2 : plug) g2 =
     let g = disjoint_union g1 g2 in
-    let ((v1, i1), l1) = plug1
-    and ((v2, i2), l2) = plug2 in
-    Graph.add_edge g v1 l1 (v2 + (Graph.size g1))
+    let (v1, _, _, l1) = plug1
+    and (v2, _, _, l2) = plug2 in
+    Graph.add_edge g v1 l1 (add v2 (Graph.size g1))
   (* update the root *)
 
   let compatible 
-      ((v1, { Graph.clr = clr1; adj = adj1}), lc1) 
-      ((v2, { Graph.clr = clr2; adj = adj2 }), lc2) =
+      (v1, clr1, _, lc1) 
+      (v2, clr2, _, lc2) =
     (LLab.compare lc1 lc2 = 0) && Gram.compatibility clr1 lc1 clr2
       
   let canonical g = failwith "UnrootedTree.canonical: unimplemented"
@@ -306,7 +315,7 @@ struct
       (fun nlab id -> NLab.print nlab)
       LLab.print
 
-  let print_plug ((_, { Graph.clr = clr1; adj = adj1 }), lc1) =
+  let print_plug (v1, clr1, adj1, lc1) =
     Printf.sprintf "[%s -(%s)->]" (NLab.print clr1) (LLab.print lc1)
     
     

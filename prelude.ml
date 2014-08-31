@@ -90,6 +90,58 @@ let sections l =
   sections l [[]]
 
 
+let rec fsection_aux ll acc metacc =
+  match ll with
+  | [] -> (List.rev acc) :: metacc
+  | l :: tll ->
+    match l with
+    | [] -> metacc
+    | x :: tl ->
+      let res = fsection_aux tll (x :: acc) metacc in
+      fsection_aux (tl :: tll) acc res
+
+let fsection : 'a list -> ('a -> 'b list) -> 'b list list =
+  fun l f ->
+  let lists = List.map f l in
+  fsection_aux lists [] []
+
+let rec fold_fsection_aux ll f g facc gacc =
+  match ll with
+  | [] -> g facc gacc
+  | l :: tll ->
+    match l with
+    | [] -> gacc
+    | x :: tl ->
+      let gacc = fold_fsection_aux tll f g (f x facc) gacc in
+      fold_fsection_aux (tl :: tll) f g facc gacc
+
+let fold_fsection_old l gen f g facc gacc =
+  let lists = List.map gen l in
+  fold_fsection_aux lists f g facc gacc
+
+let rec fold_fsection gen f g l facc gacc =
+  match l with
+  | [] -> g facc gacc
+  | e :: tll ->
+    let l = gen e in
+    List.fold_left (fun gacc x ->
+      fold_fsection gen f g tll (f e x facc) gacc
+    ) gacc l
+ 
+
+let rec fold_cartesian f l1 l2 l2' acc =
+  match l1 with
+  | [] -> acc
+  | x1 :: tl1 ->
+    match l2' with
+    | [] -> 
+      fold_cartesian f tl1 l2 l2 acc
+    | x2 :: tl2 ->
+      let acc = f x1 x2 acc in
+      fold_cartesian f l1 l2 tl2 acc
+
+let fold_cartesian f l1 l2 acc = f l1 l2 l2 acc
+
 (* Integer map, implemented as in Ocaml stdlib *)
 
 module IntMap =

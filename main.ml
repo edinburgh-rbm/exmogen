@@ -3,12 +3,10 @@ open Chemistry
 let c = Atom.({ atom = C; arity = 4 })
 let h = Atom.({ atom = H; arity = 1 })
 
-(* carbon pattern *)
 let carbon : Molecule.t =
   let g = Molecule.empty in
   Molecule.add_node_with_colour g c
 
-(* hydrogen pattern *)
 let hydrogen : Molecule.t =
   let g = Molecule.empty in
   Molecule.add_node_with_colour g h
@@ -18,25 +16,13 @@ let seed = carbon
 let mset : Molecule.t Generator.mset =
   [ (carbon, 8);
     (hydrogen, 20) ]
-    (* (ch3, 4); *)
-    (* (ch2p, 4); ] *)
-    (* (ch2oh, 1); *)
-    (* (cooh, 1); *)
-    (* (cho, 1); *)
-    (* (cop, 1); *)
-    (* (ch2, 1); *)
-    (* (ch_oh, 1); *)
-    (* (co, 1); *)
-    (* (chp, 1); *)
-    (* (ch, 1); *)
-    (* (c_oh, 1); *)
-    (* (cp, 1) ] *)
 
 let result = Generator.enumerate seed mset Generator.Canonical.empty
 let result = Generator.Canonical.elements result
 
-let s = List.map (fun (res, _) ->  Molecule.R.print (Molecule.root res 0)) result
+let s = List.map (fun (res, _) ->  Molecule.R.print (Molecule.root res (Graph.v_of_int 0))) result
 let _ = List.iter (Printf.printf "%s\n" ) s
+
 
 
 

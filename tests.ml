@@ -1,3 +1,48 @@
+(* ---------------------------
+  Testing grafting of graphs *)
+
+let c = Atom.({ atom = C; arity = 4 })
+
+let h = Atom.({ atom = H; arity = 1 })
+
+let zero  = Graph.v_of_int 0
+let one   = Graph.v_of_int 1
+let two   = Graph.v_of_int 2
+let three = Graph.v_of_int 3
+
+let mol1 = 
+  let g = Graph.empty in
+  let g = Graph.add_node_with_colour g c in
+  let g = Graph.add_node_with_colour g c in
+  let g = Graph.add_node_with_colour g h in
+  let g = Graph.add_edge g zero Link.Triple one in
+  let g = Graph.add_edge g one Link.Simple two in
+  g
+
+let mol2 = 
+  let g = Graph.empty in
+  let g = Graph.add_node_with_colour g c in
+  let g = Graph.add_node_with_colour g h in
+  let g = Graph.add_node_with_colour g h in
+  let g = Graph.add_node_with_colour g h in
+  let g = Graph.add_edge g zero Link.Simple one in
+  let g = Graph.add_edge g zero Link.Simple two in
+  let g = Graph.add_edge g zero Link.Simple three in
+  g
+
+let mol3 =
+  Graph.graft mol1 mol2 zero zero
+
+let _ =
+  Graph.to_dot "mol1" "mol1" mol1 (fun nlab id -> Atom.print nlab) Link.print
+
+let _ =
+  Graph.to_dot "mol2" "mol2" mol2 (fun nlab id -> Atom.print nlab) Link.print
+
+let _ =
+  Graph.to_dot "mol3" "mol3" mol3 (fun nlab id -> Atom.print nlab) Link.print
+
+
 (*-----------------------------
   Testing group theoretic stuff*)
 
