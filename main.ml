@@ -2,29 +2,139 @@ open Chemistry
 
 let c = Atom.({ atom = C; arity = 4 })
 let h = Atom.({ atom = H; arity = 1 })
+let o = Atom.({ atom = O; arity = 2 })
+let p = Atom.({ atom = P; arity = 1 })
 
-let carbon : Molecule.t =
+(* Oxydation *)
+let r_ch2_oh, hook1 =
+  let g, c  = Molecule.add_node_with_colour Molecule.empty c in
+  let g, o  = Molecule.add_node_with_colour g o in
+  let g, h1 = Molecule.add_node_with_colour g h in
+  let g, h2 = Molecule.add_node_with_colour g h in
+  let g, h3 = Molecule.add_node_with_colour g h in
+  let g     = Molecule.add_edge g c Link.Simple h1 in
+  let g     = Molecule.add_edge g c Link.Simple h2 in
+  let g     = Molecule.add_edge g c Link.Simple o in
+  (Molecule.add_edge g o Link.Simple h3, c)
+
+let r_cho, hook2 =
+  let g, c  = Molecule.add_node_with_colour Molecule.empty c in
+  let g, o  = Molecule.add_node_with_colour g o in
+  let g, h  = Molecule.add_node_with_colour g h in
+  let g     = Molecule.add_edge g c Link.Double o in
+  (Molecule.add_edge g c Link.Simple h, c)
+
+let oxidation1 = {
+  input  = r_ch2_oh;
+  output = r_cho;
+  mapping = [ (hook1, hook2) ]
+}
+
+let carbon, cv =
   let g = Molecule.empty in
   Molecule.add_node_with_colour g c
 
-let hydrogen : Molecule.t =
+let hydrogen, hv =
   let g = Molecule.empty in
   Molecule.add_node_with_colour g h
 
+let oxygen : Molecule.t =
+  let g = Molecule.empty in
+  fst (Molecule.add_node_with_colour g o)
+
+let phosphate : Molecule.t =
+  let g = Molecule.empty in
+  fst (Molecule.add_node_with_colour g p)
+
 let seed = carbon
 
-let mset : Molecule.t Generator.mset =
-  [ (carbon, 8);
-    (hydrogen, 20) ]
+let mset5 : Molecule.t Generator.mset =
+  [ (carbon, 5);
+    (hydrogen, 10);
+    (carbon, 10);
+    (phosphate, 2);
+  ]
 
-let result = Generator.enumerate seed mset Generator.Canonical.empty
-let result = Generator.Canonical.elements result
+let mset4 : Molecule.t Generator.mset =
+  [ (carbon, 4);
+    (hydrogen, 20);
+    (oxygen, 10);
+    (phosphate, 2);
+  ]
 
-let s = List.map (fun (res, _) ->  Molecule.R.print (Molecule.root res (Graph.v_of_int 0))) result
-let _ = List.iter (Printf.printf "%s\n" ) s
+let mset3 : Molecule.t Generator.mset =
+  [ (carbon, 3);
+    (hydrogen, 20);
+    (oxygen, 10);
+    (phosphate, 2);
+  ]
+
+let mset2 : Molecule.t Generator.mset =
+  [ (carbon, 2);
+    (hydrogen, 20);
+    (oxygen, 10);
+    (phosphate, 2);
+  ]
+
+let print result name =
+  let fd = open_out name in
+  List.iter
+    (List.iter (fun { input; output } ->
+      let smiles_in  = match Chemistry.to_smiles input  with None -> failwith "Error in SMILES output" | Some x -> x in
+      let smiles_out = match Chemistry.to_smiles output with None -> failwith "Error in SMILES output" | Some x -> x in
+      Printf.fprintf fd "%s + NAD <--> %s + NADH\n" smiles_in smiles_out
+     ))
+    result;
+  close_out fd
 
 
+let timer = Prelude.create_timer ()
 
+let _ =
+  let _      = Prelude.reset_timer timer in
+  let _      = Prelude.start_timer timer in
+  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset2 in
+  let time   = Prelude.get_timer timer in
+  let size   = List.length (List.hd result) in
+  let _      = Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" size time in
+  print result "oxy_2C.mol"
+
+
+let _ =
+  let _      = Prelude.reset_timer timer in
+  let _      = Prelude.start_timer timer in
+  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 in
+  let time   = Prelude.get_timer timer in
+  let size   = List.length (List.hd result) in
+  let _      = Printf.printf "Generated %d instances for size 3 radical in %f seconds\n%!" size time in
+  print result "oxy_3C.mol"
+
+
+let _ =
+  let _      = Prelude.reset_timer timer in
+  let _      = Prelude.start_timer timer in
+  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset4 in
+  let time   = Prelude.get_timer timer in
+  let size   = List.length (List.hd result) in
+  let _      = Printf.printf "Generated %d instances for size 4 radical in %f seconds\n%!" size time in
+  print result "oxy_4C.mol"
+
+
+let _ =
+  let _      = Prelude.reset_timer timer in
+  let _      = Prelude.start_timer timer in
+  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset5 in
+  let time   = Prelude.get_timer timer in
+  let size   = List.length (List.hd result) in
+  let _      = Printf.printf "Generated %d instances for size 5 radical in %f seconds\n%!" size time in
+  print result "oxy_5C.mol"
+
+
+(* let result = Generator.enumerate seed mset Generator.Canonical.empty *)
+(* let result = Generator.Canonical.elements result *)
+
+(* let s = List.map (fun (res, _) -> Molecule.R.print (Molecule.root res (Graph.v_of_int 0))) result *)
+(* let _ = List.iter (Printf.printf "%s\n" ) s *)
 
 (* let _ = *)
 (*   List.iter (fun (g, _) ->  *)

@@ -129,6 +129,11 @@ let get_neighbours graph v =
 let add_node_with_colour graph clr =
   let v = graph.size in
   let info = NodeIdMap.add v { clr; adj = []; deg = 0 } graph.info in
+  { size = v + 1; info }, v
+
+let add_node_with_colour2 graph clr =
+  let v = graph.size in
+  let info = NodeIdMap.add v { clr; adj = []; deg = 0 } graph.info in
   { size = v + 1; info }
 
 let add_edge graph v1 l v2 =
@@ -141,7 +146,8 @@ let add_edge graph v1 l v2 =
   else
     failwith "add_edge: invalid arguments"
 
-(* Attach two graphs by computing their disjoint union and merging node [bigv] to node [smallv] *)
+(* Attach two graphs by computing their disjoint union and merging node [bigv] to node [smallv]
+   (in fact, smallv is replaced by bigv) *)
 let graft ~big ~small ~bigv ~smallv =
   let big, map =
     fold (fun sv sclr _ (big, vmap) ->
@@ -149,7 +155,7 @@ let graft ~big ~small ~bigv ~smallv =
         (big, (smallv, bigv) :: vmap)
       else
         let bv  = size big in
-        let big = add_node_with_colour big sclr in
+        let big = add_node_with_colour2 big sclr in
         (big, (sv, bv) :: vmap)
     ) small (big, [])
   in

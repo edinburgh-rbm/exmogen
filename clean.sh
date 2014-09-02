@@ -1,3 +1,3 @@
 #!/bin/sh
 
-rm *~ *cmo *cmx *cmi *annot *.o *.ps *.dot main
+rm *~ *cmo *cmx *cmi *annot *.o *.ps *.dot *.mol main

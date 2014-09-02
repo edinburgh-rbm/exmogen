@@ -62,6 +62,8 @@ struct
     
   let add_node_with_colour = Graph.add_node_with_colour
 
+  let add_edge = Graph.add_edge
+
   (* --------------------------- *)
   (* Printing to DOT file format *)
 
@@ -74,8 +76,6 @@ struct
   (* Instantiate rooted tree module *)
 
   module R = RootedTree.NodeEdgeColoured(NLab)(LLab)
-
-  type canonical = unit
 
   (* Given a vertex, transform the unrooted tree into a rooted one. 
      We have to take into account that the undirectedness is implemented
@@ -250,29 +250,6 @@ struct
         ) (Graph.info graph) []
       in
       Prelude.sections result
-
-  (* let m = ref 0 *)
-
-  (* let propose graph = *)
-  (*   let autos = Auto.compute_automorphisms graph in *)
-  (*   m := max !m (List.length autos); *)
-  (*   let (acc, _) = Graph.NodeIdMap.fold (fun v i (acc, cover) -> *)
-  (*     if *)
-  (*       (\* let _ = Printf.printf "_%!" in *\) *)
-  (*       IntSet.mem v cover then (acc, cover) *)
-  (*     else *)
-  (*       (\* let _ = Printf.printf ".%!" in *\) *)
-  (*       let (_, { Graph.clr; adj }) as info = (v, Graph.get_info graph v) in *)
-  (*       let adjc  = List.map fst adj in *)
-  (*       let links = Gram.growth_policy clr adjc in *)
-  (*       let cover = List.fold_left (fun cover perm -> *)
-  (*         IntSet.union cover (Perm.ArrayBased.orbit perm v) *)
-  (*       ) cover autos in *)
-  (*       let acc   = List.fold_left (fun acc lc -> (info, lc) :: acc) acc links in *)
-  (*       (acc, cover) *)
-  (*   ) (Graph.info graph) ([], IntSet.empty) *)
-  (*   in *)
-  (*   acc *)
 
   (* Compute the disjoint union of two graphs. This implies shifting the nodes
      ids of graph2 by graph1.size. TODO incremental update of canonical root *)

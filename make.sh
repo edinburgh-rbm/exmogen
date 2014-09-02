@@ -6,4 +6,6 @@
 
 ocamlopt.opt ptmap.mli graph.mli
 
-ocamlopt.opt -inline 50 -o main -annot unix.cmxa prelude.ml ptmap.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml chemistry.ml main.ml
+#ocamlopt.opt -inline 50 -o main -annot unix.cmxa prelude.ml ptmap.ml canon.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml chemistry.ml main.ml
+
+ocamlopt.opt -inline 100 -o main -annot unix.cmxa prelude.ml ptmap.ml canon.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml chemistry.ml main.ml

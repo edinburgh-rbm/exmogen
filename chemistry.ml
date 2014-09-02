@@ -199,7 +199,7 @@ let to_smiles =
     | ECNode(x, cs) ->
       match x.Atom.atom with
       | Atom.H -> None
-      | Atom.P -> Some "P"
+      | Atom.P -> Some "p"
       | _ ->
         let str = 
           List.fold_left (fun acc (bond, target) ->
@@ -217,7 +217,9 @@ let to_smiles =
         in
         Some str
   in
-  aux
+  fun graph ->
+    let tree = Molecule.root graph (Graph.v_of_int 0) in
+    aux tree
 
 (* -------------------------------------------------------------------------- *)
 (* Reaction instantiation *)
@@ -259,7 +261,7 @@ let extract_seeds schemes =
 (* Molecule.t list -> Molecule.t Generator.mset -> (Molecule.t * Generator.Canonical.t) list *)
 let saturate_all_seeds seeds mset =
   List.map (fun seed ->
-    let molseed = Molecule.add_node_with_colour Molecule.empty seed in
+    let molseed, _  = Molecule.add_node_with_colour Molecule.empty seed in
     let completions = Generator.enumerate molseed mset Generator.Canonical.empty in
     (seed, completions)
   ) seeds
@@ -270,7 +272,7 @@ let instantiate_scheme seeds { input; output; mapping } =
       let set    = List.assoc (typeof (Graph.get_info input vin)) seeds in
       Generator.Canonical.elements set
     )
-    (fun (vin, vout) (graphtling, _) (input, output) -> 
+    (fun (vin, vout) graphtling (input, output) -> 
       let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
       let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
       (input, output)
