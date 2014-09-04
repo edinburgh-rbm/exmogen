@@ -1,4 +1,4 @@
-(* matrix-related stuff *)
+(* square matrix-related stuff *)
 
 type t = int array array
 
@@ -6,27 +6,53 @@ type t = int array array
 
 let allocated : (int * int, t) Hashtbl.t = Hashtbl.create 30
 
-let create : int -> int -> t = fun l c -> Array.create_matrix l c 0
+let create : int -> t = 
+  fun dim -> Array.create_matrix dim dim 0
 
-let alloc l c =
-  let key = (l, c) in
-  if Hashtbl.mem allocated key then
-    (let x = Hashtbl.find allocated key in
-     Hashtbl.remove allocated key;
-     x)
-  else
-    create l c
+let allocated : (int * t) list ref = ref []
 
-let free (m : t) =
-  let key = (Array.length m, Array.length m.(0)) in
-  for i = 0 to Array.length m - 1 do
-    for j = 0 to Array.length m.(0) - 1 do
-      m.(i).(j) <- 0
-    done
-  done;
-  Hashtbl.add allocated key m
+let rec take_opt (key : int) l acc =
+  match l with
+  | [] -> None
+  | ((k, m) as pair) :: tl -> 
+    if k = key then
+      (allocated := (List.rev_append acc tl);
+       Some m)
+    else
+      take_opt key tl (pair :: acc)
 
-let alloc l c = create l c
+let alloc dim =
+  match take_opt dim !allocated [] with
+  | None -> create dim
+  | Some m -> m
+
+let free m =
+  let sz = Array.length m in
+  allocated := (sz, m) :: !allocated
+
+let alloc dim = create dim
+
+let free m = ()
+
+(* let alloc l c = *)
+(*   let key = (l, c) in *)
+(*   if Hashtbl.mem allocated key then *)
+(*     (let x = Hashtbl.find allocated key in *)
+(*      Hashtbl.remove allocated key; *)
+(*      x) *)
+(*   else *)
+(*     create l c *)
+
+(* let free (m : t) = *)
+(*   let key = (Array.length m, Array.length m.(0)) in *)
+(*   for i = 0 to Array.length m - 1 do *)
+(*     for j = 0 to Array.length m.(0) - 1 do *)
+(*       m.(i).(j) <- 0 *)
+(*     done *)
+(*   done; *)
+(*   Hashtbl.add allocated key m *)
+
+(* let alloc l c = create l c *)
   (* let key = (l, c) in *)
   (* if Hashtbl.mem allocated key then *)
   (*   (let x = Hashtbl.find allocated key in *)
@@ -35,7 +61,8 @@ let alloc l c = create l c
   (* else *)
   (*   create l c *)
 
-let free (m : t) = ()
+(* let free (m : t) = () *)
+
   (* let key = (Array.length m, Array.length m.(0)) in *)
   (* for i = 0 to Array.length m - 1 do *)
   (*   for j = 0 to Array.length m.(0) - 1 do *)
@@ -56,9 +83,9 @@ let free (m : t) = ()
 (*   done; *)
 (*   m *)
 
-(* dimensions of the matrix, lines \times columns *)
+(* dimensions of the square matrix *)
 let dim a =
-  (Array.length a, Array.length a.(0))
+  Array.length a
 
 let is_zero a =
   let acc = ref true in
@@ -101,18 +128,6 @@ let add_into a b =
 let multiply a b c =
   let len = Array.length a in
   for i = 0 to len - 1 do
-    for j = 0 to len - 1 do
-      a.(i).(j) <- 0;
-      for k = 0 to len - 1 do
-        a.(i).(j) <- a.(i).(j) + b.(i).(k) * c.(k).(j)
-      done
-    done
-  done
-
-(* a <- b * c  -- assumes well-sized square matrices *)
-let multiply a b c =
-  let len = Array.length a in
-  for i = 0 to len - 1 do
     let ai = a.(i) in
     let bi = b.(i) in
     for j = 0 to len - 1 do
@@ -123,18 +138,17 @@ let multiply a b c =
     done
   done
 
-
 let copy_in_place a b =
-  let (l, c) = dim a in
-  for i = 0 to l - 1 do
-    for j = 0 to c - 1 do
+  let d = dim a in
+  for i = 0 to d - 1 do
+    for j = 0 to d - 1 do
       b.(i).(j) <- a.(i).(j)
     done
   done
 
 let copy a =
-  let (l, c) = dim a in
-  let b = create l c in
+  let d = dim a in
+  let b = create d in
   copy_in_place a b;
   b
 

@@ -50,8 +50,8 @@ let seed = carbon
 
 let mset5 : Molecule.t Generator.mset =
   [ (carbon, 5);
-    (hydrogen, 10);
-    (carbon, 10);
+    (hydrogen, 20);
+    (oxygen, 10);
     (phosphate, 2);
   ]
 
@@ -90,34 +90,34 @@ let print result name =
 
 let timer = Prelude.create_timer ()
 
-let _ =
-  let _      = Prelude.reset_timer timer in
-  let _      = Prelude.start_timer timer in
-  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset2 in
-  let time   = Prelude.get_timer timer in
-  let size   = List.length (List.hd result) in
-  let _      = Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" size time in
-  print result "oxy_2C.mol"
+(* let _ = *)
+(*   let _      = Prelude.reset_timer timer in *)
+(*   let _      = Prelude.start_timer timer in *)
+(*   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset2 in *)
+(*   let time   = Prelude.get_timer timer in *)
+(*   let size   = List.length (List.hd result) in *)
+(*   let _      = Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" size time in *)
+(*   print result "oxy_2C.mol" *)
 
 
-let _ =
-  let _      = Prelude.reset_timer timer in
-  let _      = Prelude.start_timer timer in
-  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 in
-  let time   = Prelude.get_timer timer in
-  let size   = List.length (List.hd result) in
-  let _      = Printf.printf "Generated %d instances for size 3 radical in %f seconds\n%!" size time in
-  print result "oxy_3C.mol"
+(* let _ = *)
+(*   let _      = Prelude.reset_timer timer in *)
+(*   let _      = Prelude.start_timer timer in *)
+(*   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 in *)
+(*   let time   = Prelude.get_timer timer in *)
+(*   let size   = List.length (List.hd result) in *)
+(*   let _      = Printf.printf "Generated %d instances for size 3 radical in %f seconds\n%!" size time in *)
+(*   print result "oxy_3C.mol" *)
 
 
-let _ =
-  let _      = Prelude.reset_timer timer in
-  let _      = Prelude.start_timer timer in
-  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset4 in
-  let time   = Prelude.get_timer timer in
-  let size   = List.length (List.hd result) in
-  let _      = Printf.printf "Generated %d instances for size 4 radical in %f seconds\n%!" size time in
-  print result "oxy_4C.mol"
+(* let _ = *)
+(*   let _      = Prelude.reset_timer timer in *)
+(*   let _      = Prelude.start_timer timer in *)
+(*   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset4 in *)
+(*   let time   = Prelude.get_timer timer in *)
+(*   let size   = List.length (List.hd result) in *)
+(*   let _      = Printf.printf "Generated %d instances for size 4 radical in %f seconds\n%!" size time in *)
+(*   print result "oxy_4C.mol" *)
 
 
 let _ =

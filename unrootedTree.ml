@@ -122,10 +122,10 @@ struct
   *)
   let compute_distances graph =
     let dim    = Graph.size graph in
-    let adj    = Matrix.alloc dim dim in
-    let tmp    = Matrix.alloc dim dim in
-    let iteree = Matrix.alloc dim dim in
-    let dist   = Matrix.alloc dim dim in
+    let adj    = Matrix.alloc dim in
+    let tmp    = Matrix.alloc dim in
+    let iteree = Matrix.alloc dim in
+    let dist   = Matrix.alloc dim in
     compute_adjacency_matrix adj graph;
     Matrix.copy_in_place adj tmp;
     Matrix.copy_in_place adj iteree;
@@ -151,7 +151,7 @@ struct
 
   let compute_distances graph =
     let dim    = Graph.size graph in
-    let dist   = Matrix.alloc dim dim in
+    let dist   = Matrix.alloc dim in
     Matrix.init dist dim;
     compute_adjacency_matrix dist graph;
     for i = 0 to dim - 1 do

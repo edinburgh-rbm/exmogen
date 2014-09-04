@@ -125,25 +125,35 @@ module Enumerate
             ) metacc branches
         ) metacc
 
+    let count = ref 0
+
+    let log () =
+      incr count;
+      if !count mod 1000 = 0 then
+        Printf.printf "%d\n%!" !count
+      else ()
+
     let rec enumerate 
         (seed : G.t) 
         (patterns : G.t mset) 
-        (acc : Canonical.t) 
+        (acc : Canonical.t)
         =
       let plugs = G.saturate seed in
       match plugs with
       | [] -> failwith "Growable.enumerate: impossible saturation"
       | [[]] ->
         (* No more growing opportunities: the tree is complete. *)
-        Canonical.add seed acc
+        if not (Canonical.mem seed acc) then
+            log ();
+         Canonical.add seed acc
       | _ ->
         (match patterns with
         | [] ->
-          (* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *)
-          (* seed :: acc *)
+            (* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *)
+            (* seed :: acc *)
           acc
         | _ ->
-          (* TODO check size of patterns vs. |x| where x \in plugs *)
+            (* TODO check size of patterns vs. |x| where x \in plugs *)
           List.fold_left (fun acc thread ->
             let alternatives = canonicalize (enumerate_augmentations seed thread patterns []) in
             List.fold_left (fun acc (elt, _, mset) ->
