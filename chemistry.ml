@@ -250,17 +250,19 @@ let extract_seeds schemes =
     match schemes with
     | [] -> acc
     | { input; mapping } :: tail ->
-      List.fold_left (fun acc (seed, _) ->
+      let acc = List.fold_left (fun acc (seed, _) ->
         let info = Graph.get_info input seed in
         (typeof info) :: acc
       ) acc mapping
+      in
+      loop tail acc
   in
   let seeds = loop schemes [] in
   Prelude.filter_duplicates seeds
 
 (* Molecule.t list -> Molecule.t Generator.mset -> (Molecule.t * Generator.Canonical.t) list *)
 let saturate_all_seeds seeds mset =
-  List.map (fun seed ->
+  List.rev_map (fun seed ->
     let molseed, _  = Molecule.add_node_with_colour Molecule.empty seed in
     let completions = Generator.enumerate molseed mset Generator.Canonical.empty in
     (seed, completions)
@@ -285,7 +287,7 @@ let instantiate_scheme seeds { input; output; mapping } =
 let instantiate_schemes schemes ingredients =
   let seeds = extract_seeds schemes in
   let sat   = saturate_all_seeds seeds ingredients in
-  List.map (instantiate_scheme sat) schemes
+  List.rev_map (instantiate_scheme sat) schemes
 
 (* let instantiate_schemes schemes multiset = *)
 (*   let seeds = extract_seeds schemes in *)
