@@ -269,20 +269,21 @@ let saturate_all_seeds seeds mset =
   ) seeds
 
 let instantiate_scheme seeds { input; output; mapping } =
-  Prelude.fold_fsection
-    (fun (vin, _) -> 
-      let set    = List.assoc (typeof (Graph.get_info input vin)) seeds in
-      Generator.Canonical.elements set
-    )
-    (fun (vin, vout) graphtling (input, output) -> 
-      let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
-      let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
+  let reactions =
+    Prelude.fold_fsection_tr
+      (fun (vin, _) -> 
+        let set    = List.assoc (typeof (Graph.get_info input vin)) seeds in
+        Generator.Canonical.elements set
+      )
+      (fun (vin, vout) graphtling (input, output) -> 
+        let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
+        let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
+        (input, output)
+      )
+      mapping
       (input, output)
-    )
-    (fun (input, output) acc -> { input; output; mapping } :: acc)
-    mapping
-    (input, output)
-    []
+  in
+  List.rev_map (fun (input, output) -> { input; output; mapping }) reactions
 
 let instantiate_schemes schemes ingredients =
   let seeds = extract_seeds schemes in

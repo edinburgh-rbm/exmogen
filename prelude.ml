@@ -105,20 +105,6 @@ let fsection : 'a list -> ('a -> 'b list) -> 'b list list =
   let lists = List.map f l in
   fsection_aux lists [] []
 
-let rec fold_fsection_aux ll f g facc gacc =
-  match ll with
-  | [] -> g facc gacc
-  | l :: tll ->
-    match l with
-    | [] -> gacc
-    | x :: tl ->
-      let gacc = fold_fsection_aux tll f g (f x facc) gacc in
-      fold_fsection_aux (tl :: tll) f g facc gacc
-
-let fold_fsection_old l gen f g facc gacc =
-  let lists = List.map gen l in
-  fold_fsection_aux lists f g facc gacc
-
 let rec fold_fsection gen f g l facc gacc =
   match l with
   | [] -> g facc gacc
@@ -127,7 +113,22 @@ let rec fold_fsection gen f g l facc gacc =
     List.fold_left (fun gacc x ->
       fold_fsection gen f g tll (f e x facc) gacc
     ) gacc l
- 
+
+let rec fold_fsection_aux gen f index acc =
+  match index with
+  | [] -> acc
+  | i :: tl ->
+    let col = gen i in
+    let acc =
+      List.fold_left (fun acc' x ->
+        List.fold_left (fun acc' thread ->         
+          (f i x thread) :: acc'            
+        ) acc' acc
+      ) [] col
+    in
+    fold_fsection_aux gen f tl acc
+
+let fold_fsection_tr gen f index facc = fold_fsection_aux gen f index [facc]
 
 let rec fold_cartesian f l1 l2 l2' acc =
   match l1 with
