@@ -29,7 +29,7 @@ module Make (C : Canonicalizable) =
     let add elt set =
       Canonical.add (elt, C.canonical elt) set
 
-    let elements set = List.map fst (Canonical.elements set)
+    let elements set = List.rev_map fst (Canonical.elements set)
 
     let mem elt set =
       Canonical.mem (elt, C.canonical elt) set
