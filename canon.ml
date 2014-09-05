@@ -42,4 +42,7 @@ module Make (C : Canonicalizable) =
         Some (Canonical.add x set)
 
     let fold = Canonical.fold
+
+    let card = Canonical.cardinal
+
   end

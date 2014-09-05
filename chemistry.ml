@@ -264,26 +264,37 @@ let extract_seeds schemes =
 let saturate_all_seeds seeds mset =
   List.rev_map (fun seed ->
     let molseed, _  = Molecule.add_node_with_colour Molecule.empty seed in
-    let completions = Generator.enumerate molseed mset Generator.Canonical.empty in
+    let completions = Generator.enumerate molseed mset (Generator.Canonical.empty, 0) in
     (seed, completions)
   ) seeds
 
+(* A special version of fold_fsection that tries to mimize memory allocation *)
+let rec fold_fsection_aux gen f index acc =
+  match index with
+  | [] -> acc
+  | i :: tl ->
+    let col, card = gen i in
+    let acc =
+      Generator.Canonical.fold (fun x acc' ->
+        List.fold_left (fun acc' thread ->         
+          (f i x thread) :: acc'
+        ) acc' acc
+      ) col []
+    in
+    fold_fsection_aux gen f tl acc
+
+let fold_fsection_tr gen f index facc = fold_fsection_aux gen f index [facc]
+
 let instantiate_scheme seeds { input; output; mapping } =
-  let reactions =
-    Prelude.fold_fsection_tr
-      (fun (vin, _) -> 
-        let set    = List.assoc (typeof (Graph.get_info input vin)) seeds in
-        Generator.Canonical.elements set
-      )
-      (fun (vin, vout) graphtling (input, output) -> 
-        let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
-        let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
-        (input, output)
-      )
-      mapping
-      (input, output)
-  in
-  List.rev_map (fun (input, output) -> { input; output; mapping }) reactions
+  fold_fsection_tr
+    (fun (vin, _) -> List.assoc (typeof (Graph.get_info input vin)) seeds)
+    (fun (vin, vout) (graphtling, _) { input; output; mapping } -> 
+      let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
+      let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
+      { input; output; mapping }
+    )
+    mapping
+    { input; output; mapping }
 
 let instantiate_schemes schemes ingredients =
   let seeds = extract_seeds schemes in

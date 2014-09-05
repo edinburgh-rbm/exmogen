@@ -136,16 +136,17 @@ module Enumerate
     let rec enumerate 
         (seed : G.t) 
         (patterns : G.t mset) 
-        (acc : Canonical.t)
+        (((canon, card) as acc) : Canonical.t * int)
         =
       let plugs = G.saturate seed in
       match plugs with
       | [] -> failwith "Growable.enumerate: impossible saturation"
       | [[]] ->
         (* No more growing opportunities: the tree is complete. *)
-        if not (Canonical.mem seed acc) then
-            log ();
-         Canonical.add seed acc
+        if Canonical.mem seed canon then
+          acc
+        else
+          (Canonical.add seed canon, card+1)
       | _ ->
         (match patterns with
         | [] ->
@@ -162,109 +163,7 @@ module Enumerate
           ) acc plugs
         )
   
-
-    (* let rec enumerate_augmentations *)
-    (*     (seed : G.t) *)
-    (*     (thread : G.plug list) *)
-    (*     (patterns : G.t mset) *)
-    (*     (acc : Canonical.t) *)
-    (*     = *)
-    (*   match thread with *)
-    (*   | [] -> *)
-    (*     enumerate seed patterns acc *)
-    (*   | wplug :: wtail -> *)
-    (*     pick_one_of_each_class patterns [] (fun acc patt patterns' -> *)
-    (*       let pplugs   = G.extend patt in *)
-    (*       let branches = pullback [wplug] pplugs in (\* There should be pretty much only one branch *\) *)
-    (*       match branches with *)
-    (*       | [] -> *)
-    (*         acc *)
-    (*       | _ -> *)
-    (*         List.fold_left (fun acc (wp, pp) -> *)
-    (*           let extended_graph = G.merge seed wp pp patt in *)
-    (*           enumerate_augmentations extended_graph wtail patterns' acc *)
-    (*         ) acc branches *)
-    (*     ) acc *)
-
-    (* and enumerate  *)
-    (*     (seed : G.t)  *)
-    (*     (patterns : G.t mset)  *)
-    (*     (acc : Canonical.t)  *)
-    (*     = *)
-    (*   let plugs = G.saturate seed in *)
-    (*   match plugs with *)
-    (*   | [] -> failwith "Growable.enumerate: impossible saturation" *)
-    (*   | [[]] -> *)
-    (*     (\* No more growing opportunities: the tree is complete. *\) *)
-    (*     Canonical.add seed acc *)
-    (*   | _ -> *)
-    (*     (match patterns with *)
-    (*     | [] -> *)
-    (*       (\* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *\) *)
-    (*       (\* seed :: acc *\) *)
-    (*       acc *)
-    (*     | _ -> *)
-    (*       (\* TODO check size of patterns vs. |x| where x \in plugs *\) *)
-    (*       List.fold_left (fun acc thread -> *)
-    (*         enumerate_augmentations seed thread patterns acc *)
-    (*       ) acc plugs *)
-    (*     ) *)
   
 
   end
 
-
-(*
-    let rec enumerate_augmentations 
-        (seed : G.t) 
-        (thread : G.plug list) 
-        (patterns : G.t mset) 
-        (acc : Canonical.t)
-        (augs : Canonical.t)
-        =
-      match thread with
-      | [] ->
-        enumerate seed patterns acc
-      | wplug :: wtail ->
-        pick_one_of_each_class patterns [] (fun acc patt patterns' ->
-          let pplugs   = G.extend patt in
-          let branches = pullback [wplug] pplugs in (* There should be pretty much only one branch *)
-          match branches with
-          | [] ->
-            acc
-          | _ ->
-            List.fold_left (fun acc (wp, pp) ->
-              let extended_graph = G.merge seed wp pp patt in
-              match Canonical.test_and_set extended_graph augs with
-              | None ->
-                (* The proposed augmentation is isomorphic to another one at the same level. *)
-                acc                
-              | Some augs' ->
-                enumerate_augmentations extended_graph wtail patterns' acc augs'
-            ) acc branches
-        ) acc
-
-    and enumerate 
-        (seed : G.t) 
-        (patterns : G.t mset) 
-        (acc : Canonical.t) 
-        =
-      let plugs = G.saturate seed in
-      match plugs with
-      | [] -> failwith "Growable.enumerate: impossible saturation"
-      | [[]] ->
-        (* No more growing opportunities: the tree is complete. *)
-        Canonical.add seed acc
-      | _ ->
-        (match patterns with
-        | [] ->
-          (* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *)
-          (* seed :: acc *)
-          acc
-        | _ ->
-          (* TODO check size of patterns vs. |x| where x \in plugs *)
-          List.fold_left (fun acc thread ->
-            enumerate_augmentations seed thread patterns acc
-          ) acc plugs
-        )
-*)    
