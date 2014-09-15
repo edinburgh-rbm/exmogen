@@ -111,7 +111,8 @@ let mkprinter name =
 let _ =
   let fd, wr = mkprinter "oxy_4C.mol" in
   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset4 wr in
-  Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0
+  Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0;
+  close_out fd
 
 (* let _ = *)
 (*   let _      = Prelude.reset_timer timer in *)
