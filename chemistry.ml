@@ -285,8 +285,17 @@ let rec fold_fsection_aux gen f index acc =
 
 let fold_fsection_tr gen f index facc = fold_fsection_aux gen f index [facc]
 
-let instantiate_scheme seeds { input; output; mapping } =
-  fold_fsection_tr
+let rec iter_fsection gen f index current writef =
+    match index with
+    | [] -> writef current
+    | i :: tl ->
+      let col, card = gen i in
+      Generator.Canonical.iter (fun x ->
+        iter_fsection gen f tl (f i x current) writef
+      ) col
+
+let instantiate_scheme seeds writef { input; output; mapping } =
+  iter_fsection
     (fun (vin, _) -> List.assoc (typeof (Graph.get_info input vin)) seeds)
     (fun (vin, vout) (graphtling, _) { input; output; mapping } -> 
       let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
@@ -295,11 +304,12 @@ let instantiate_scheme seeds { input; output; mapping } =
     )
     mapping
     { input; output; mapping }
+    writef
 
-let instantiate_schemes schemes ingredients =
+let instantiate_schemes schemes ingredients (writef : reaction -> unit) =
   let seeds = extract_seeds schemes in
   let sat   = saturate_all_seeds seeds ingredients in
-  List.rev_map (instantiate_scheme sat) schemes
+  List.iter (instantiate_scheme sat writef) schemes
 
 (* let instantiate_schemes schemes multiset = *)
 (*   let seeds = extract_seeds schemes in *)

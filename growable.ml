@@ -127,11 +127,10 @@ module Enumerate
 
     let count = ref 0
 
-    let log () =
-      incr count;
-      if !count mod 1000 = 0 then
-        Printf.printf "%d\n%!" !count
-      else ()
+    let log count = ()
+      (* if count mod 1000 = 0 then *)
+      (*   Printf.printf "%d\n%!" count *)
+      (* else () *)
 
     let rec enumerate 
         (seed : G.t) 
@@ -146,6 +145,7 @@ module Enumerate
         if Canonical.mem seed canon then
           acc
         else
+          let _ = log card in
           (Canonical.add seed canon, card+1)
       | _ ->
         (match patterns with

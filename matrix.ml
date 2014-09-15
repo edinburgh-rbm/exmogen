@@ -7,7 +7,7 @@ type t = int array array
 let allocated : (int * int, t) Hashtbl.t = Hashtbl.create 30
 
 let create : int -> t = 
-  fun dim -> Array.create_matrix dim dim 0
+  fun dim -> Array.make_matrix dim dim 0
 
 let allocated : (int * t) list ref = ref []
 

@@ -45,4 +45,6 @@ module Make (C : Canonicalizable) =
 
     let card = Canonical.cardinal
 
+    let iter = Canonical.iter
+
   end
