@@ -109,9 +109,8 @@ let mkprinter name =
 (*   Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0 *)
 
 let _ =
-  let fd, wr = mkprinter "oxy_4C.mol" in
-  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset4 wr in
-  Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0;
+  let fd, wr = mkprinter "oxy_5C.mol" in
+  let _ = Chemistry.instantiate_schemes [ oxidation1 ] mset5 wr in
   close_out fd
 
 (* let _ = *)
