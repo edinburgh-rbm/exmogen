@@ -11,16 +11,21 @@ module type GrowableType =
     
     type plug
 
+    type saturation_outcome =
+    | Alternatives of plug list list
+    | Rejected
+    | Finished
+
     val extend  : t -> plug list
 
-    val saturate : t -> plug list list
+    val saturate : t -> saturation_outcome
 
     val merge : t -> plug -> plug -> t -> t
       
     val compatible : plug -> plug -> bool
 
     val print : t -> unit
-
+      
     val print_plug : plug -> string
 
   end
@@ -50,8 +55,6 @@ module Enumerate
         pullback_aux l1 tl (pullback_elt l1 x acc)
 
     let pullback l1 l2 = pullback_aux l1 l2 []
-
-        
 
     let rec pick_one_of_each_class mset mset_acc f acc =
       match mset with
@@ -137,17 +140,17 @@ module Enumerate
         (patterns : G.t mset) 
         (((canon, card) as acc) : Canonical.t * int)
         =
-      let plugs = G.saturate seed in
-      match plugs with
-      | [] -> failwith "Growable.enumerate: impossible saturation"
-      | [[]] ->
+      let saturation = G.saturate seed in
+      match saturation with
+      | G.Rejected -> acc
+      | G.Finished ->
         (* No more growing opportunities: the tree is complete. *)
         if Canonical.mem seed canon then
           acc
         else
           let _ = log card in
           (Canonical.add seed canon, card+1)
-      | _ ->
+      | G.Alternatives plugs ->
         (match patterns with
         | [] ->
             (* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *)

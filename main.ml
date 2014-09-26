@@ -63,7 +63,7 @@ let mset4 : Molecule.t Generator.mset =
   ]
 
 let mset3 : Molecule.t Generator.mset =
-  [ (carbon, 3);
+  [ (carbon, 1);
     (hydrogen, 20);
     (oxygen, 10);
     (phosphate, 2);
@@ -75,6 +75,21 @@ let mset2 : Molecule.t Generator.mset =
     (oxygen, 10);
     (phosphate, 2);
   ]
+
+let bartek3 : Molecule.t Generator.mset =
+  [ (carbon, 2);
+    (hydrogen, 20);
+    (oxygen, 3);
+    (phosphate, 3);
+  ]
+
+let bartek4 : Molecule.t Generator.mset =
+  [ (carbon, 3);
+    (hydrogen, 20);
+    (oxygen, 4);
+    (phosphate, 4);
+  ]
+
 
 let print result name =
   let fd = open_out name in
@@ -96,6 +111,27 @@ let mkprinter name =
   in
   (fd, write)
 
+let mkprinterbartek name =
+  let fd = open_out name in
+  let write = fun mol ->
+      let smiles = match Chemistry.to_smiles mol with None -> failwith "Error in SMILES output" | Some x -> x in
+      Printf.fprintf fd "%s\n" smiles
+  in
+  (fd, write)
+
+
+let _ =
+  let fd, wr = mkprinterbartek "bartek3COP.mol" in
+  let seed, hook = Molecule.add_node_with_colour Molecule.empty c in
+  let _ = Chemistry.enumerate seed bartek3 wr in
+  close_out fd
+
+
+let _ =
+  let fd, wr = mkprinterbartek "bartek4COP.mol" in
+  let seed, hook = Molecule.add_node_with_colour Molecule.empty c in
+  let _ = Chemistry.enumerate seed bartek4 wr in
+  close_out fd
 
 
 (* let _ = *)
@@ -108,10 +144,10 @@ let mkprinter name =
 (*   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 wr in *)
 (*   Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0 *)
 
-let _ =
-  let fd, wr = mkprinter "oxy_5C.mol" in
-  let _ = Chemistry.instantiate_schemes [ oxidation1 ] mset5 wr in
-  close_out fd
+(* let _ = *)
+(*   let fd, wr = mkprinter "oxy_3C.mol" in *)
+(*   let _ = Chemistry.instantiate_schemes [ oxidation1 ] mset3 wr in *)
+(*   close_out fd *)
 
 (* let _ = *)
 (*   let _      = Prelude.reset_timer timer in *)

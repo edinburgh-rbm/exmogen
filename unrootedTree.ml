@@ -53,6 +53,11 @@ struct
   (* An insertion point onto the graph *)
   type plug = Graph.vertex * NLab.t * (LLab.t * Graph.vertex) list * LLab.t
 
+  type saturation_outcome =
+  | Alternatives of plug list list
+  | Rejected
+  | Finished
+
   type t = (NLab.t, LLab.t) Graph.t
 
   (* -------- *)
@@ -239,7 +244,7 @@ struct
         List.fold_left (fun acc lc -> (v, clr, adj, lc) :: acc) acc links
       ) (Graph.info graph) []
 
-  let saturate : t -> plug list list =
+  let saturate : t -> saturation_outcome =
     fun graph ->
       let result = 
         Graph.NodeIdMap.fold (fun v i acc ->
@@ -249,7 +254,11 @@ struct
           (List.map (List.map (fun lc -> (v, clr, adj, lc))) links) :: acc
         ) (Graph.info graph) []
       in
-      Prelude.sections result
+      let l = Prelude.sections result in
+      match l with
+      | [[]] -> Finished
+      | [] -> failwith "UnrootedTree.saturate: error"
+      | _ -> Alternatives l
 
   (* Compute the disjoint union of two graphs. This implies shifting the nodes
      ids of graph2 by graph1.size. TODO incremental update of canonical root *)

@@ -267,7 +267,7 @@ let saturate_all_seeds seeds mset =
     let completions = Generator.enumerate molseed mset (Generator.Canonical.empty, 0) in
     (seed, completions)
   ) seeds
-
+  
 (* A special version of fold_fsection that tries to mimize memory allocation *)
 let rec fold_fsection_aux gen f index acc =
   match index with
@@ -311,6 +311,9 @@ let instantiate_schemes schemes ingredients (writef : reaction -> unit) =
   let sat   = saturate_all_seeds seeds ingredients in
   List.iter (instantiate_scheme sat writef) schemes
 
+let enumerate seed mset writef =
+  let canonical, _  = Generator.enumerate seed mset (Generator.Canonical.empty, 0) in
+  Generator.Canonical.iter (fun (x,_) -> writef x) canonical
 (* let instantiate_schemes schemes multiset = *)
 (*   let seeds = extract_seeds schemes in *)
 (*   let seed_table = List.map (fun atom -> *)
