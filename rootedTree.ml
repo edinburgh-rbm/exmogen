@@ -1,8 +1,6 @@
 open Prelude
 
-(* Labelled trees. We expect labels to be totally ordered. 
-*)
-
+(* Rooted Node-couloured trees. We expect labels to be totally ordered. *)
 module NodeColoured(Lab : Ordered) =
 struct
 
@@ -71,6 +69,8 @@ struct
 
   (* Instantiate RONCs with [Product] *)
   module Encoded = NodeColoured(Product)
+
+  type canonical = Encoded.t
       
   (* Conversion to RONCs. We have a conversion function
       [n](l) : t -> LLab.t -> Encoded.t     
@@ -85,7 +85,9 @@ struct
       let subtrees = List.map (fun (l, n') -> to_ronc n' l) cs in
       Encoded.Node((n, l0), subtrees)
 
-  let to_ronc tree = to_ronc tree LLab.inhabited
+  let canonical tree = Encoded.sort (to_ronc tree LLab.inhabited)
+
+  let compare = Encoded.tree_compare
 
   let rec print = function
     | ECNode(n, cs) ->
@@ -94,7 +96,6 @@ struct
       Printf.sprintf "*(%s, %s)" (NLab.print n) css
 
 end
-
 
 (* (\* Random RONC generation - not fair in any way *\)     *)
 (* let rec random_tree decay = *)

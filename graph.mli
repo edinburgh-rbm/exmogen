@@ -50,6 +50,8 @@ val graft :
   smallv : vertex -> 
   ('a, 'b) t
 
+val exists_injection : ('a, 'b) t -> vertex -> ('a, 'b) t -> vertex -> bool
+
 val to_dot_aux : out_channel -> string -> ('a, 'b) t -> ('a -> vertex -> string) -> ('b -> string) -> unit
 
 val to_dot : string -> string -> ('a, 'b) t -> ('a -> vertex -> string) -> ('b -> string) -> unit

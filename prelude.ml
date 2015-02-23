@@ -284,3 +284,6 @@ let sort_uniq cmp l =
   in
   let len = List.length l in
   if len < 2 then l else sort len l
+
+(* multisets -- we use a list to increase sharing *)
+type 'a mset = ('a * int) list

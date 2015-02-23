@@ -1,4 +1,10 @@
-module type Canonicalizable =
+(* From an arbitrary canonicalizable data structure,
+   we produce a data structure storing equivalence classes
+   of elememts.
+
+*)
+
+module type CanonicalizableType =
   sig
 
     type t
@@ -9,9 +15,11 @@ module type Canonicalizable =
 
     val compare : canonical -> canonical -> int
 
+    val print : t -> string
+
   end
 
-module Make (C : Canonicalizable) =
+module Make (C : CanonicalizableType) =
   struct
 
     (* Set of canonical solutions *)

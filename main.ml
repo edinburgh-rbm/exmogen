@@ -48,42 +48,42 @@ let phosphate : Molecule.t =
 
 let seed = carbon
 
-let mset5 : Molecule.t Generator.mset =
+let mset5 : Molecule.t Prelude.mset =
   [ (carbon, 5);
     (hydrogen, 20);
     (oxygen, 10);
     (phosphate, 2);
   ]
 
-let mset4 : Molecule.t Generator.mset =
+let mset4 : Molecule.t Prelude.mset =
   [ (carbon, 4);
     (hydrogen, 20);
     (oxygen, 10);
     (phosphate, 2);
   ]
 
-let mset3 : Molecule.t Generator.mset =
+let mset3 : Molecule.t Prelude.mset =
   [ (carbon, 1);
     (hydrogen, 20);
     (oxygen, 10);
     (phosphate, 2);
   ]
 
-let mset2 : Molecule.t Generator.mset =
+let mset2 : Molecule.t Prelude.mset =
   [ (carbon, 2);
     (hydrogen, 20);
     (oxygen, 10);
     (phosphate, 2);
   ]
 
-let bartek3 : Molecule.t Generator.mset =
+let bartek3 : Molecule.t Prelude.mset =
   [ (carbon, 2);
     (hydrogen, 20);
     (oxygen, 3);
     (phosphate, 3);
   ]
 
-let bartek4 : Molecule.t Generator.mset =
+let bartek4 : Molecule.t Prelude.mset =
   [ (carbon, 3);
     (hydrogen, 20);
     (oxygen, 4);
@@ -120,11 +120,11 @@ let mkprinterbartek name =
   (fd, write)
 
 
-let _ =
-  let fd, wr = mkprinterbartek "bartek3COP.mol" in
-  let seed, hook = Molecule.add_node_with_colour Molecule.empty c in
-  let _ = Chemistry.enumerate seed bartek3 wr in
-  close_out fd
+(* let _ = *)
+(*   let fd, wr = mkprinterbartek "bartek3COP.mol" in *)
+(*   let seed, hook = Molecule.add_node_with_colour Molecule.empty c in *)
+(*   let _ = Chemistry.enumerate seed bartek3 wr in *)
+(*   close_out fd *)
 
 
 let _ =

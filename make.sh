@@ -4,8 +4,8 @@
 
 # ocamlopt -g -o main -annot unix.cmxa dllist.ml bitv.ml prelude.ml rootedTree.ml matrix.ml group.ml perm.ml bsgs.ml graph.ml auto.ml unrootedTree.ml growable.ml main.ml
 
-ocamlopt.opt ptmap.mli graph.mli
+ocamlopt.opt ptmap.mli prelude.mli canonicalSet.mli growable.mli rootedTree.mli graph.mli unrootedTree.mli chemistry.mli
 
-#ocamlopt.opt -inline 50 -o main -annot unix.cmxa prelude.ml ptmap.ml canon.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml chemistry.ml main.ml
+#ocamlopt.opt -inline 50 -o main -annot unix.cmxa prelude.ml ptmap.ml canonicalSet.ml rootedTree.ml matrix.ml graph.ml unrootedTree.ml growable.ml chemistry.ml main.ml
 
-ocamlopt.opt -inline 100 -o main -annot unix.cmxa prelude.ml ptmap.ml canon.ml rootedTree.ml matrix.ml graph.ml growable.ml unrootedTree.ml chemistry.ml main.ml
+ocamlopt.opt -annot -inline 100 -o main -annot unix.cmxa prelude.ml ptmap.ml canonicalSet.ml rootedTree.ml matrix.ml graph.ml growable.ml unrootedTree.ml chemistry.ml output.ml main.ml

@@ -30,13 +30,16 @@ module type GrowableType =
 
   end
 
+(* multisets -- we use a list to increase sharing *)
+type 'a mset = ('a * int) list
+
 module Enumerate
   (G : GrowableType) 
-  (C : Canon.Canonicalizable with type t = G.t)
+  (C : CanonicalSet.CanonicalizableType with type t = G.t)
   =
   struct
 
-    module Canonical = Canon.Make(C)
+    module Canonical = CanonicalSet.Make(C)
       
     (* we want to compute the set pullback of lists for the co-span defined by G.compatible *)
     let rec pullback_elt l1 patt2 acc =
@@ -73,25 +76,21 @@ module Enumerate
 
     (* (\* Implementation of semi-imperative multisets. *\) *)
 
-    type 'a imset = {
-      keys  : 'a  array;
-      count : int array
-    }
+    (* type 'a imset = { *)
+    (*   keys  : 'a  array; *)
+    (*   count : int array *)
+    (* } *)
 
-    let mset_copy { keys; count } =
-      { keys; count = Array.copy count }
+    (* let mset_copy { keys; count } = *)
+    (*   { keys; count = Array.copy count } *)
 
-    let mset_eq { count = count1 } { count = count2 } =
-      count1 = count2
+    (* let mset_eq { count = count1 } { count = count2 } = *)
+    (*   count1 = count2 *)
 
-    let mset_decr i mset =
-      let m = mset_copy mset in
-      m.count.(i) <- m.count.(i) - 1;
-      m
-
-    (* multisets -- we use a list to increase sharing *)
-    type 'a mset = ('a * int) list
-
+    (* let mset_decr i mset = *)
+    (*   let m = mset_copy mset in *)
+    (*   m.count.(i) <- m.count.(i) - 1; *)
+    (*   m *)
 
     (* let mset_max { keys; count } m2 = *)
     (*   { m2 with *)

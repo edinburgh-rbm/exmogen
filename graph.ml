@@ -168,7 +168,41 @@ let graft ~big ~small ~bigv ~smallv =
       else
         big
     ) big sadj
-  ) small big 
+  ) small big   
+
+(* --------------------------- *)
+(* Testing graph injections    *)
+
+let rec exists_injection_aux g0 v0 g1 v1 visited =
+  if List.mem (v0, v1) visited then
+    true
+  else
+    let i0 = get_info g0 v0 in
+    let i1 = get_info g1 v1 in
+    if i0.deg <= i1.deg && i0.clr = i1.clr then (* Notice the <= : we are testing injection*)
+      let visited = (v0, v1) :: visited in
+      exists_injection_edges g0 i0.adj g1 i1.adj visited
+    else
+      false
+
+and exists_injection_edges g0 e0 g1 e1 visited =
+  match e0 with
+  | [] -> true (* [] = e1  if we were testing equality *)
+  | (l0, v0) :: t0 ->
+    find_matching_edge g0 l0 v0 t0 g1 e1 visited []
+
+and find_matching_edge g0 l0 v0 t0 g1 e1 visited acc =
+  match e1 with
+  | [] -> false
+  | ((l1, v1) as edge) :: t1 ->
+    if l0 = l1 && (exists_injection_aux g0 v0 g1 v1 visited) then
+      exists_injection_edges g0 t0 g1 (List.rev_append acc t1) visited
+    else
+      find_matching_edge g0 l0 v0 t0 g1 t1 visited (edge :: acc)
+
+let exists_injection g0 v0 g1 v1 =
+  exists_injection_aux g0 v0 g1 v1 []
+  
 
 (* --------------------------- *)
 (* Printing to DOT file format *)

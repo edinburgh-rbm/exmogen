@@ -80,6 +80,7 @@ module Gram =
       | Double -> 2
       | Triple -> 3
 
+
     (* Given the current state of a node, this function
        returns all the admissible bindings *)
     let extension_policy nc llc =
@@ -135,91 +136,71 @@ module Gram =
 
 module Molecule = UnrootedTree.Make(Atom)(Link)(Gram)
 
-module Canon =
-  struct
 
-    type t = Molecule.t
-
-    type canonical = Molecule.R.Encoded.t
-
-    let canonical t =
-      snd (Molecule.canonical_root t)
-
-    let compare x y = Molecule.R.Encoded.tree_compare x y
-
-  end
-
-module Generator = Growable.Enumerate(Molecule)(Canon)
+module Generator = Growable.Enumerate(Molecule.Growable)(Molecule.Canonical)
 
 (* -------------------------------------------------------------------------- *)
 (* SMILES ad-hoc output -- TODO make this generic *)
 
-(* module NodeIdSet = *)
-(*   Set.Make *)
-(*     (struct *)
-(*       type t      = int *)
-(*       let compare (x : int) (y : int) =  *)
-(*         if x < y then -1 *)
-(*         else if x > y then 1 *)
-(*         else 0 *)
-(*      end) *)
+(* assuming acyclicity & connectedness *)
+let rec to_smiles_aux g already_explored current_node =
+  if List.mem current_node already_explored then
+    None
+  else
+    let set = current_node :: already_explored in
+    let ({ Graph.clr; adj; deg } as info) = Graph.get_info g current_node in
+    match clr.Atom.atom with
+    | Atom.H -> None
+    | Atom.P -> Some "p"
+      (* Some "O(P(=O)(O)(O))" *)      
+    | _ ->
+      let str =
+        List.fold_left (fun acc (bond, target) ->
+          match to_smiles_aux g set target with
+          | None -> acc
+          | Some str ->
+            match bond with
+            | Link.Simple ->
+              Printf.sprintf "%s(%s)" acc str
+            | Link.Double ->
+              Printf.sprintf "%s(=%s)" acc str
+            | Link.Triple ->
+              Printf.sprintf "%s(#%s)" acc str
+        ) (Atom.print clr) adj
+      in
+      Some str
 
-(* (\* assuming acyclicity & connectedness *\) *)
-(* let rec to_smiles g already_explored current_node = *)
-(*   if NodeIdSet.mem current_node already_explored then *)
-(*     None *)
-(*   else *)
-(*     let set = NodeIdSet.add current_node already_explored in *)
-(*     let { Graph.clr; adj; deg } = Graph.get_info g current_node in *)
-(*     match clr with *)
-(*     | Atom.H -> None *)
-(*     | Atom.P -> *)
-(*       Some "O(P(=O)(O)(O))" *)
-(*     | _ -> *)
-(*       let str =  *)
-(*         List.fold_left (fun acc (bond, target) -> *)
-(*           match to_smiles g set target with *)
-(*           | None -> acc *)
-(*           | Some str -> *)
-(*             match bond with *)
-(*             | Link.Simple -> *)
-(*               Printf.sprintf "%s(%s)" acc str *)
-(*             | Link.Double -> *)
-(*               Printf.sprintf "%s(=%s)" acc str *)
-(*             | Link.Triple -> *)
-(*               Printf.sprintf "%s(#%s)" acc str *)
-(*         ) (Atom.print clr) adj *)
-(*       in *)
-(*       Some str *)
+let to_smiles graph =
+  to_smiles_aux graph [] (Graph.v_of_int 0)
 
-let to_smiles =
-  let open Molecule.R in
-  let rec aux tree =
-    match tree with
-    | ECNode(x, cs) ->
-      match x.Atom.atom with
-      | Atom.H -> None
-      | Atom.P -> Some "p"
-      | _ ->
-        let str = 
-          List.fold_left (fun acc (bond, target) ->
-            match aux target with
-            | None -> acc
-            | Some str ->
-              match bond with
-              | Link.Simple ->
-                Printf.sprintf "%s(%s)" acc str
-              | Link.Double ->
-                Printf.sprintf "%s(=%s)" acc str
-              | Link.Triple ->
-                Printf.sprintf "%s(#%s)" acc str
-          ) (Atom.print x) cs
-        in
-        Some str
-  in
-  fun graph ->
-    let tree = Molecule.root graph (Graph.v_of_int 0) in
-    aux tree
+(* let to_smiles = *)
+(*   let open Molecule.R in *)
+(*   let rec aux tree = *)
+(*     match tree with *)
+(*     | ECNode(x, cs) -> *)
+(*       match x.Atom.atom with *)
+(*       | Atom.H -> None *)
+(*       | Atom.P -> Some "p" *)
+(*       | _ -> *)
+(*         let str =  *)
+(*           List.fold_left (fun acc (bond, target) -> *)
+(*             match aux target with *)
+(*             | None -> acc *)
+(*             | Some str -> *)
+(*               match bond with *)
+(*               | Link.Simple -> *)
+(*                 Printf.sprintf "%s(%s)" acc str *)
+(*               | Link.Double -> *)
+(*                 Printf.sprintf "%s(=%s)" acc str *)
+(*               | Link.Triple -> *)
+(*                 Printf.sprintf "%s(#%s)" acc str *)
+(*           ) (Atom.print x) cs *)
+(*         in *)
+(*         Some str *)
+(*   in *)
+(*   fun graph -> *)
+(*     let tree = Molecule.root graph (Graph.v_of_int 0) in *)
+(*     aux tree *)
 
 (* -------------------------------------------------------------------------- *)
 (* Reaction instantiation *)
