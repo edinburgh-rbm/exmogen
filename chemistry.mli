@@ -1,4 +1,3 @@
-
 module Link :
   sig
     type t = Simple | Double | Triple
@@ -55,3 +54,8 @@ val to_smiles : Molecule.t -> string option
 val typeof : (Atom.t, Link.t) Graph.info -> Atom.t
 
 val enumerate : Molecule.t -> Molecule.t Prelude.mset -> (Molecule.t -> unit) -> unit
+ 
+val instantiate_schemes :
+  reaction list ->
+  Molecule.Growable.t Prelude.mset -> (reaction -> unit) -> unit
+  

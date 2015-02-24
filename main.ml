@@ -63,7 +63,7 @@ let mset4 : Molecule.t Prelude.mset =
   ]
 
 let mset3 : Molecule.t Prelude.mset =
-  [ (carbon, 1);
+  [ (carbon, 3);
     (hydrogen, 20);
     (oxygen, 10);
     (phosphate, 2);
@@ -120,11 +120,13 @@ let mkprinterbartek name =
   (fd, write)
 
 
-(* let _ = *)
-(*   let fd, wr = mkprinterbartek "bartek3COP.mol" in *)
-(*   let seed, hook = Molecule.add_node_with_colour Molecule.empty c in *)
-(*   let _ = Chemistry.enumerate seed bartek3 wr in *)
-(*   close_out fd *)
+(* Straightforward molecule generation test. *)
+(*
+let _ =
+  let fd, wr = mkprinterbartek "bartek3COP.mol" in
+  let seed, hook = Molecule.add_node_with_colour Molecule.empty c in
+  let _ = Chemistry.enumerate seed bartek3 wr in
+  close_out fd
 
 
 let _ =
@@ -132,12 +134,14 @@ let _ =
   let seed, hook = Molecule.add_node_with_colour Molecule.empty c in
   let _ = Chemistry.enumerate seed bartek4 wr in
   close_out fd
+*)
 
+(* generating reactions *)
 
-(* let _ = *)
-(*   let fd, wr = mkprinter "oxy_3C.mol" in *)
-(*   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset2 wr in *)
-(*   Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0 *)
+let _ =
+  let fd, wr = mkprinter "oxy_3C.mol" in
+  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 wr in
+  Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0
 
 (* let _ = *)
 (*   let fd, wr = mkprinter "oxy_3C.mol" in *)
