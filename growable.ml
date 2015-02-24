@@ -1,3 +1,5 @@
+open Prelude
+
 (* Growable structures. This abstracts aways the details of how the structures are encoded,
    and deals with enumeration of graph-like structures in a nice high-level way. 
 
@@ -30,16 +32,13 @@ module type GrowableType =
 
   end
 
-(* multisets -- we use a list to increase sharing *)
-type 'a mset = ('a * int) list
-
 module Enumerate
   (G : GrowableType) 
   (C : CanonicalSet.CanonicalizableType with type t = G.t)
   =
   struct
 
-    module Canonical = CanonicalSet.Make(C)
+    module CanonicalSet = CanonicalSet.Make(C)
       
     (* we want to compute the set pullback of lists for the co-span defined by G.compatible *)
     let rec pullback_elt l1 patt2 acc =
@@ -72,7 +71,7 @@ module Enumerate
           pick_one_of_each_class tail (x :: mset_acc) f acc'
 
     let print_section_dbg s =
-      Prelude.to_sseq G.print_plug ", " s
+      to_sseq G.print_plug ", " s
 
     (* (\* Implementation of semi-imperative multisets. *\) *)
 
@@ -99,7 +98,7 @@ module Enumerate
 
     let canonicalize : (G.t * C.canonical * G.t mset) list -> (G.t * C.canonical * G.t mset) list =
       fun metacc ->
-        Prelude.sort_uniq (fun (_, g1, _) (_, g2, _) ->
+        sort_uniq (fun (_, g1, _) (_, g2, _) ->
           C.compare g1 g2
         ) metacc
         
@@ -127,7 +126,7 @@ module Enumerate
             ) metacc branches
         ) metacc
 
-    let count = ref 0
+    (* let count = ref 0 *)
 
     let log count = ()
       (* if count mod 1000 = 0 then *)
@@ -137,18 +136,18 @@ module Enumerate
     let rec enumerate 
         (seed : G.t) 
         (patterns : G.t mset) 
-        (((canon, card) as acc) : Canonical.t * int)
+        (((canon, card) as acc) : CanonicalSet.t * int)
         =
       let saturation = G.saturate seed in
       match saturation with
       | G.Rejected -> acc
       | G.Finished ->
         (* No more growing opportunities: the tree is complete. *)
-        if Canonical.mem seed canon then
+        if CanonicalSet.mem seed canon then
           acc
         else
           let _ = log card in
-          (Canonical.add seed canon, card+1)
+          (CanonicalSet.add seed canon, card+1)
       | G.Alternatives plugs ->
         (match patterns with
         | [] ->

@@ -5,54 +5,67 @@
 *)
 
 module type CanonicalizableType =
-  sig
+sig
 
-    type t
+  type t
+  type canonical
 
-    type canonical
+  val canonical : t -> canonical
+  val compare : canonical -> canonical -> int
+  val print : t -> string
 
-    val canonical : t -> canonical
+end
 
-    val compare : canonical -> canonical -> int
 
-    val print : t -> string
+module type CanonicalSetType =
+sig
 
-  end
+  type t
+  type elt
+  type canonical
+
+  val empty : t
+  val add : elt -> t -> t
+  val elements : t -> elt list
+  val mem : elt -> t -> bool
+  val fold : (elt * canonical -> 'a -> 'a) -> t -> 'a -> 'a
+  val card : t -> int
+  val iter : (elt * canonical -> unit) -> t -> unit
+  val choose : t -> elt
+end
+
 
 module Make (C : CanonicalizableType) =
   struct
 
-    (* Set of canonical solutions *)
-    module Canonical = Set.Make(
+    (* Set of C.t up to canonical equivalence *)
+    module S = Set.Make(
       struct
         type t = (C.t * C.canonical)
           
         let compare (_, x) (_, y) = C.compare x y
       end)
 
-    type t = Canonical.t
+    type t         = S.t
+    type elt       = C.t
+    type canonical = C.canonical
 
-    let empty = Canonical.empty
+    let empty = S.empty
 
     let add elt set =
-      Canonical.add (elt, C.canonical elt) set
+      S.add (elt, C.canonical elt) set
 
-    let elements set = List.rev_map fst (Canonical.elements set)
-
+    let elements set = List.rev_map fst (S.elements set)
+      
     let mem elt set =
-      Canonical.mem (elt, C.canonical elt) set
+      S.mem (elt, C.canonical elt) set
 
-    let test_and_set elt set =
-      let x = (elt, C.canonical elt) in
-      if Canonical.mem x set then
-        None
-      else
-        Some (Canonical.add x set)
+    let fold = S.fold
 
-    let fold = Canonical.fold
+    let card = S.cardinal
 
-    let card = Canonical.cardinal
+    let iter = S.iter
 
-    let iter = Canonical.iter
+    let choose (x : t) = fst (S.choose x)
 
   end

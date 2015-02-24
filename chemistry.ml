@@ -134,10 +134,11 @@ module Gram =
 (* Instantiate the exhaustive generators with the particular modules
    given above *)
 
-module Molecule = UnrootedTree.Make(Atom)(Link)(Gram)
-
+module Molecule  = UnrootedTree.Make(Atom)(Link)(Gram)
 
 module Generator = Growable.Enumerate(Molecule.Growable)(Molecule.Canonical)
+
+module CanonicalSet = Generator.CanonicalSet
 
 (* -------------------------------------------------------------------------- *)
 (* SMILES ad-hoc output -- TODO make this generic *)
@@ -245,7 +246,7 @@ let extract_seeds schemes =
 let saturate_all_seeds seeds mset =
   List.rev_map (fun seed ->
     let molseed, _  = Molecule.add_node_with_colour Molecule.empty seed in
-    let completions = Generator.enumerate molseed mset (Generator.Canonical.empty, 0) in
+    let completions = Generator.enumerate molseed mset (Generator.CanonicalSet.empty, 0) in
     (seed, completions)
   ) seeds
   
@@ -256,7 +257,7 @@ let rec fold_fsection_aux gen f index acc =
   | i :: tl ->
     let col, card = gen i in
     let acc =
-      Generator.Canonical.fold (fun x acc' ->
+      Generator.CanonicalSet.fold (fun x acc' ->
         List.fold_left (fun acc' thread ->         
           (f i x thread) :: acc'
         ) acc' acc
@@ -271,7 +272,7 @@ let rec iter_fsection gen f index current writef =
     | [] -> writef current
     | i :: tl ->
       let col, card = gen i in
-      Generator.Canonical.iter (fun x ->
+      Generator.CanonicalSet.iter (fun x ->
         iter_fsection gen f tl (f i x current) writef
       ) col
 
@@ -293,8 +294,8 @@ let instantiate_schemes schemes ingredients (writef : reaction -> unit) =
   List.iter (instantiate_scheme sat writef) schemes
 
 let enumerate seed mset writef =
-  let canonical, _  = Generator.enumerate seed mset (Generator.Canonical.empty, 0) in
-  Generator.Canonical.iter (fun (x,_) -> writef x) canonical
+  let canonical, _  = Generator.enumerate seed mset (Generator.CanonicalSet.empty, 0) in
+  Generator.CanonicalSet.iter (fun (x,_) -> writef x) canonical
 (* let instantiate_schemes schemes multiset = *)
 (*   let seeds = extract_seeds schemes in *)
 (*   let seed_table = List.map (fun atom -> *)

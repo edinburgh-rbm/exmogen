@@ -18,7 +18,8 @@ module Atom :
 
 module Molecule :
   sig
-    type t = (Atom.t, Link.t) Graph.t
+    type t  = (Atom.t, Link.t) Graph.t
+    type t' = t
 
     val empty                : t
     val add_node_with_colour : t -> Atom.t -> t * Graph.vertex
@@ -27,7 +28,21 @@ module Molecule :
 
     val disjoint_union       : t -> t -> t
     val print                : t -> unit
+
+    module Canonical : 
+      (CanonicalSet.CanonicalizableType
+       with type t = t')
+
+    module Growable :
+      (Growable.GrowableType
+       with type t = t')
+
   end
+
+module CanonicalSet : 
+  (CanonicalSet.CanonicalSetType
+   with type elt       = Molecule.t
+   and type  canonical = Molecule.Canonical.canonical)
 
 type reaction = {
   input   : Molecule.t;
@@ -39,4 +54,4 @@ val to_smiles : Molecule.t -> string option
 
 val typeof : (Atom.t, Link.t) Graph.info -> Atom.t
 
-val enumerate : Molecule.t -> Molecule.t Growable.mset -> (Molecule.t -> unit) -> unit
+val enumerate : Molecule.t -> Molecule.t Prelude.mset -> (Molecule.t -> unit) -> unit
