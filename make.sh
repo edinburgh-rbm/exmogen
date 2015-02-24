@@ -8,7 +8,7 @@ ocamlopt.opt ptmap.mli prelude.mli canonicalSet.mli growable.mli rootedTree.mli 
 
 ocamlopt smiles.mli
 
-menhir smilesParser.mly
+menhir --infer smilesParser.mly
 
 ocamlopt.opt smilesParser.mli
 

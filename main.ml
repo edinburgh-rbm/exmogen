@@ -120,6 +120,14 @@ let mkprinterbartek name =
   (fd, write)
 
 
+let buff = 
+  Lexing.from_channel (open_in Sys.argv.(1))
+
+let reacs = 
+  SmilesParser.reactions SmilesLexer.token buff
+
+let _ = Printf.printf "%s%!" (Smiles.print_reactions reacs)
+
 (* Straightforward molecule generation test. *)
 (*
 let _ =
@@ -138,10 +146,12 @@ let _ =
 
 (* generating reactions *)
 
+(*
 let _ =
   let fd, wr = mkprinter "oxy_3C.mol" in
   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 wr in
   Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0
+*)
 
 (* let _ = *)
 (*   let fd, wr = mkprinter "oxy_3C.mol" in *)

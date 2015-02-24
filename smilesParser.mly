@@ -6,11 +6,11 @@
 %token SINGLE DOUBLE TRIPLE
 %token DOT EOF
 %token PLUS
-%token OPENP CLOSEP OPENBRACKET CLOSEBRACKET OPENBRACE CLOSEBRACE
+%token OPENP CLOSEP OPENBRACKET CLOSEBRACKET OPENBRACE CLOSEBRACE SEMICOLON
 %token <string> FLOAT INTEGER IDENT VAR
 
-%start molecule
-%type <Smiles.smiles_ast> molecule
+%start reactions
+%type <Smiles.reactions> reactions
 
 %%
 
@@ -25,12 +25,24 @@ link:
  | TRIPLE { Triple }
 
 molecule:
- | atom list(protected_molecule) EOF { Node($1, $2) }
+ | atom list(protected_molecule) { Node($1, $2) }
 ;
 
 protected_molecule:
  | link atom                  { ($1, Node($2, [])) }
  | link OPENP molecule CLOSEP { ($1, $3) }
 ;
+
+molecules:
+ | l = separated_list(PLUS, molecule)  { l }
+;
+
+reversible_reaction:
+ | molecules REVARROW molecules { { input = $1; output = $3} }
+;
+
+reactions:
+ | l = separated_list(SEMICOLON, reversible_reaction) EOF { l }
+;     
 
 %%

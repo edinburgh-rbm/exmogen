@@ -9,6 +9,7 @@ let lower_case_letter = ['a'-'z']
 
 rule token = parse
   | [' ' '\t'] { token lexbuf }
+  | "//" [^ '\n']* '\n' { token lexbuf }
   | digit+ as num { INTEGER(num) }
   | "." digit+
   | digit+ "." digit* as num
@@ -20,6 +21,7 @@ rule token = parse
   | "]" { CLOSEBRACKET }
   | "{" { OPENBRACE }
   | "}" { CLOSEBRACE }
+  | ";" { SEMICOLON }
   | "-" { SINGLE }
   | "=" { DOUBLE }
   | "#" { TRIPLE }
