@@ -9,13 +9,13 @@ C-r=O-H + NAD + Pi        <-> C-r=O-Phos + NADH;
 
 // Phosphate transfer
 r-(O-H) + ATP             <-> r-Phos + ADP;
-r=(C-Phos-r2) + ADP       <-> r-h-(C=O-r2) + ATP;
+r=(C-Phos-r2) + ADP       <-> r-H-(C=O-r2) + ATP;
 r-(C=O-(O-H)) + ATP       <-> r-(C=O-Phos) + ADP;
-r-(O-H) + ATP + H2O       <-> r-Phos + AMP + Pi; // What is PPi ? Should I interpret it as P-Pi ?
-r-(O-H) + Pi + ATP        <-> r-Phos + AMP + PPi;
-r-(C=O-(O-H)) + ATP + H2O <-> r-(C=O-p) + AMP + Pi;
-r-(C=O-(O-H)) + Pi + ATP  <-> r-(C=O-p) + AMP + PPi; // CP or Cp ???? I guess it's Cp, so C-Phos.
-r=(C-Phos-r2) + AMP + Pi  <-> r-(C=O-r2) + ATP + H2O;
+r-(O-H) + ATP + H2O       <-> r-Phos + AMP + Pi; 
+r-(O-H) + Pi + ATP        <-> r-Phos + AMP + PPi; // What is PPi ? Should I interpret it as P-Pi ?
+r-(C=O-(O-H)) + ATP + H2O <-> r-(C=O-Phos) + AMP + Pi;
+r-(C=O-(O-H)) + Pi + ATP  <-> r-(C=O-Phos) + AMP + PPi; 
+r=(C-Phos-r2) + AMP + Pi  <-> r-(C=O-r2) + ATP + H2O; // CP or Cp ???? I guess it's Cp, so C-Phos.
 r=(C-Phos-r2) + AMP + PPi <-> r-(C=O-r2) + ATP + Pi;
 
 // Hydrolysis

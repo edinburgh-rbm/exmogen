@@ -18,6 +18,20 @@ type reaction =
 type reactions = reaction list
 
 
+(* Extract all variables from a molecule *)
+let rec extract_variables acc mol =
+  match mol with
+  | Node(atom, submols) ->
+    (match atom with
+    | Atom _ ->
+      List.fold_left extract_variables acc (List.map snd submols)
+    | Var s ->
+      List.fold_left extract_variables (s :: acc) (List.map snd submols)
+    )
+
+
+(* Pretty-printing *)
+
 let print_link = function
   | Simple -> "-"
   | Double -> "="
@@ -44,6 +58,16 @@ and print_list = function
 let print_molecules = Prelude.to_sseq print " + "
 
 let print_reaction {input; output} =
-  Printf.sprintf "%s <=> %s" (print_molecules input) (print_molecules output)
+  let ins   = print_molecules input
+  and outs  = print_molecules output
+  and invs  = 
+    let s = List.fold_left extract_variables [] input in
+    Prelude.to_sseq (fun x -> x) "," s
+  and outvs = 
+    let s = List.fold_left extract_variables [] output in
+    Prelude.to_sseq (fun x -> x) "," s
+  in
+  Printf.sprintf "%s <=> %s // %s %s" ins outs invs outvs
 
 let print_reactions = Prelude.to_sseq print_reaction ";\n"
+
