@@ -65,7 +65,6 @@ struct
   let to_dot file_name graph_name graph print_node =
     Graph.to_dot file_name graph_name graph print_node LLab.print
 
-      
   (* Compute the disjoint union of two graphs. This implies shifting the nodes
      ids of graph2 by graph1.size. TODO incremental update of canonical root *)
   let add x d = 
@@ -146,8 +145,7 @@ struct
         | [] -> failwith "UnrootedTree.saturate: error"
         | _ -> Alternatives l
 
-    let print = print
-      
+    let print = print     
 
   end
 

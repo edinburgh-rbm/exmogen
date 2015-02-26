@@ -6,7 +6,7 @@
 
 ocamlopt.opt ptmap.mli prelude.mli canonicalSet.mli growable.mli rootedTree.mli graph.mli unrootedTree.mli chemistry.mli
 
-ocamlopt smiles.mli
+ocamlopt reactions.mli
 
 menhir --infer smilesParser.mly
 
@@ -16,4 +16,4 @@ ocamllex smilesLexer.mll
 
 ocamlopt.opt -annot -inline 100 -o main -annot\
  smilesParser.ml smilesLexer.ml\
- unix.cmxa prelude.ml ptmap.ml canonicalSet.ml rootedTree.ml matrix.ml graph.ml growable.ml unrootedTree.ml chemistry.ml output.ml smiles.ml main.ml
+ unix.cmxa prelude.ml ptmap.ml canonicalSet.ml rootedTree.ml matrix.ml graph.ml growable.ml unrootedTree.ml chemistry.ml output.ml reactions.ml main.ml

@@ -1,7 +1,6 @@
 (* This modules implement automatic and exhaustive generation of chemical 
    reactions. We handle tree-like CHOP molecules. *)
 
-
 (* -------------------------------------------------------------------------- *)
 (* Specification of the CHOP chemistry *)
 (* -------------------------------------------------------------------------- *)
@@ -206,8 +205,6 @@ let to_smiles graph =
 (* -------------------------------------------------------------------------- *)
 (* Reaction instantiation *)
 
-type vertex_digest = Graph.vertex * Atom.t
-
 (* A reaction scheme is given by a reaction input, a reaction output and
    an (injective) mapping from input stubs to output stubs. If everything
    is to make sense, the mapping should in fact be bijective. *)
@@ -216,6 +213,99 @@ type reaction =
     output  : Molecule.t;
     mapping : (Graph.vertex * Graph.vertex) list
   }
+
+(* (\* Checks the validity of a Reactions.smiles_ast molecule *\) *)
+(* let rec check_chop_validity m = *)
+(*   match m with *)
+(*   | Reactions.Node(atom, submols) -> *)
+(*     match atom with *)
+(*     | Reaction.Atom s -> *)
+(*       match s with *)
+(*       | "C" -> *)
+(*       | "H" *)
+(*       | "O" *)
+(*       | "P" *)
+(*     | Reaction.Var s *)
+
+
+let c = Atom.({ atom = C; arity = 4 })
+let h = Atom.({ atom = H; arity = 1 })
+let o = Atom.({ atom = O; arity = 2 })
+let p = Atom.({ atom = P; arity = 1 })
+
+let atoms_enum = [ c; h; o; p ]
+
+let link_of_smiles = function
+  | Reactions.Simple -> Link.Simple
+  | Reactions.Double -> Link.Double
+  | Reactions.Triple -> Link.Triple
+
+(* Maps Reactions.smart_ast to actual graphs, instantiating all
+   variables for concrete atoms. 
+
+           /!\ Does not check for arity /!\  
+
+   Produces a map variable -> node along the way.
+*)
+let rec molecule_to_graphs m graph map =
+  match m with
+  | Reactions.Node(Reactions.Atom s, submols) ->
+    let colour =
+      (match s with
+      | "C" -> c
+      | "H" -> h
+      | "O" -> o
+      | "P" -> p
+      | _   -> failwith "Chemistry.molecule_to_graph: unknown atomic compound")
+    in
+    extend_graph_with_colour m graph map colour submols
+  | Reactions.Node(Reactions.Var v, submols) ->
+    let res_c = extend_graph_with_colour m graph map c submols
+    and res_h = extend_graph_with_colour m graph map h submols
+    and res_o = extend_graph_with_colour m graph map o submols
+    and res_p = extend_graph_with_colour m graph map p submols in
+    let graphs = res_c @ res_h @ res_o @ res_p in
+    List.map (fun (graph, anchor, map) -> 
+      (graph, anchor, (v, anchor) :: map)
+    ) graphs
+
+and extend_graph_with_colour m graph map colour submols =
+  let (graph, anchor) = Graph.add_node_with_colour graph colour in
+  List.fold_left (fun graphs (link, submol) ->
+    extend_graphs_with_sub_molecule graphs link submol
+  ) [(graph, anchor, map)] submols
+
+and extend_graphs_with_sub_molecule graphs link submol =
+  List.fold_left (fun acc (graph, anchor, map) ->
+    let extended_graphs = molecule_to_graphs submol graph map in
+    link_extended_graphs_to_root extended_graphs anchor link acc
+  ) [] graphs
+
+and link_extended_graphs_to_root extended_graphs anchor link acc =
+  List.fold_left (fun acc (g, anchor', map) ->
+    let g = Molecule.add_edge g anchor (link_of_smiles link) anchor' in
+    (g, anchor, map) :: acc
+  ) acc extended_graphs
+
+
+let molecule_to_graphs m = molecule_to_graphs m Molecule.empty []
+
+
+(* Converts Reactions.smiles_ast to a set of molecules. Each variable is
+   replaced by all compatible Atom.t elements, taking into account arity. *)
+(* let rec concretize_molecule m = *)
+(*   match m with *)
+(*   | Reactions.Node(atom, submols) -> *)
+(*     match atom with *)
+(*     | Reaction.Atom s -> *)
+(*       match s with *)
+(*       | "C" *)
+(*       | "H" *)
+(*       | "O" *)
+(*       | "P" *)
+(*     | Reaction.Var s *)
+(* Convert reaction from the parser to a proper reaction. *)
+
 
 (* Given a node, returns its "signature", which uniquely identifies
    the set of its possible extensions. *)

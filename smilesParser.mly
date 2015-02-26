@@ -1,5 +1,5 @@
 %{
-  open Smiles
+  open Reactions
 %}
 
 %token ARROW REVARROW
@@ -10,7 +10,7 @@
 %token <string> FLOAT INTEGER IDENT VAR
 
 %start reactions
-%type <Smiles.reactions> reactions
+%type <Reactions.reactions> reactions
 
 %%
 

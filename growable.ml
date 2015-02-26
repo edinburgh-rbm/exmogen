@@ -73,29 +73,6 @@ module Enumerate
     let print_section_dbg s =
       to_sseq G.print_plug ", " s
 
-    (* (\* Implementation of semi-imperative multisets. *\) *)
-
-    (* type 'a imset = { *)
-    (*   keys  : 'a  array; *)
-    (*   count : int array *)
-    (* } *)
-
-    (* let mset_copy { keys; count } = *)
-    (*   { keys; count = Array.copy count } *)
-
-    (* let mset_eq { count = count1 } { count = count2 } = *)
-    (*   count1 = count2 *)
-
-    (* let mset_decr i mset = *)
-    (*   let m = mset_copy mset in *)
-    (*   m.count.(i) <- m.count.(i) - 1; *)
-    (*   m *)
-
-    (* let mset_max { keys; count } m2 = *)
-    (*   { m2 with *)
-    (*    count = Array.init (Array.length count) (fun i -> max count.(i)  m2.count.(i)) *)
-    (*   } *)
-
     let canonicalize : (G.t * C.canonical * G.t mset) list -> (G.t * C.canonical * G.t mset) list =
       fun metacc ->
         sort_uniq (fun (_, g1, _) (_, g2, _) ->
@@ -126,13 +103,6 @@ module Enumerate
             ) metacc branches
         ) metacc
 
-    (* let count = ref 0 *)
-
-    let log count = ()
-      (* if count mod 1000 = 0 then *)
-      (*   Printf.printf "%d\n%!" count *)
-      (* else () *)
-
     let rec enumerate 
         (seed : G.t) 
         (patterns : G.t mset) 
@@ -146,16 +116,15 @@ module Enumerate
         if CanonicalSet.mem seed canon then
           acc
         else
-          let _ = log card in
           (CanonicalSet.add seed canon, card+1)
       | G.Alternatives plugs ->
         (match patterns with
         | [] ->
-            (* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *)
-            (* seed :: acc *)
+          (* let _ = Printf.fprintf stderr "warning: empty multiset of patterns but molecule still open\n%!" in *)
+          (* seed :: acc *)
           acc
         | _ ->
-            (* TODO check size of patterns vs. |x| where x \in plugs *)
+          (* TODO check size of patterns vs. |x| where x \in plugs *)
           List.fold_left (fun acc thread ->
             let alternatives = canonicalize (enumerate_augmentations seed thread patterns []) in
             List.fold_left (fun acc (elt, _, mset) ->

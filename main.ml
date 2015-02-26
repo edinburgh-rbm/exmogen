@@ -1,132 +1,153 @@
 open Chemistry
 
-let c = Atom.({ atom = C; arity = 4 })
-let h = Atom.({ atom = H; arity = 1 })
-let o = Atom.({ atom = O; arity = 2 })
-let p = Atom.({ atom = P; arity = 1 })
 
-(* Oxydation *)
-let r_ch2_oh, hook1 =
-  let g, c  = Molecule.add_node_with_colour Molecule.empty c in
-  let g, o  = Molecule.add_node_with_colour g o in
-  let g, h1 = Molecule.add_node_with_colour g h in
-  let g, h2 = Molecule.add_node_with_colour g h in
-  let g, h3 = Molecule.add_node_with_colour g h in
-  let g     = Molecule.add_edge g c Link.Simple h1 in
-  let g     = Molecule.add_edge g c Link.Simple h2 in
-  let g     = Molecule.add_edge g c Link.Simple o in
-  (Molecule.add_edge g o Link.Simple h3, c)
+let m = 
+  let open Reactions in
+  let h   = Node(Atom("H"), []) in
+  let oh  = Node(Atom("O"), [Simple, h]) in
+  let o   = Node(Atom("O"), []) in
+  Node(Atom("C"), [ (Double, o); (Simple, h); (Simple, oh)])
 
-let r_cho, hook2 =
-  let g, c  = Molecule.add_node_with_colour Molecule.empty c in
-  let g, o  = Molecule.add_node_with_colour g o in
-  let g, h  = Molecule.add_node_with_colour g h in
-  let g     = Molecule.add_edge g c Link.Double o in
-  (Molecule.add_edge g c Link.Simple h, c)
+let g = molecule_to_graphs m
 
-let oxidation1 = {
-  input  = r_ch2_oh;
-  output = r_cho;
-  mapping = [ (hook1, hook2) ]
-}
+let _ = List.iter (fun (g, _, _) -> Molecule.to_dot "chooh" "CHOOH" g (fun node i -> Atom.print node)) g
 
-let carbon, cv =
-  let g = Molecule.empty in
-  Molecule.add_node_with_colour g c
+(* let c = Atom.({ atom = C; arity = 4 }) *)
+(* let h = Atom.({ atom = H; arity = 1 }) *)
+(* let o = Atom.({ atom = O; arity = 2 }) *)
+(* let p = Atom.({ atom = P; arity = 1 }) *)
 
-let hydrogen, hv =
-  let g = Molecule.empty in
-  Molecule.add_node_with_colour g h
+(* (\* Oxydation *\) *)
+(* let r_ch2_oh, hook1 = *)
+(*   let g, c  = Molecule.add_node_with_colour Molecule.empty c in *)
+(*   let g, o  = Molecule.add_node_with_colour g o in *)
+(*   let g, h1 = Molecule.add_node_with_colour g h in *)
+(*   let g, h2 = Molecule.add_node_with_colour g h in *)
+(*   let g, h3 = Molecule.add_node_with_colour g h in *)
+(*   let g     = Molecule.add_edge g c Link.Simple h1 in *)
+(*   let g     = Molecule.add_edge g c Link.Simple h2 in *)
+(*   let g     = Molecule.add_edge g c Link.Simple o in *)
+(*   (Molecule.add_edge g o Link.Simple h3, c) *)
 
-let oxygen : Molecule.t =
-  let g = Molecule.empty in
-  fst (Molecule.add_node_with_colour g o)
+(* let r_cho, hook2 = *)
+(*   let g, c  = Molecule.add_node_with_colour Molecule.empty c in *)
+(*   let g, o  = Molecule.add_node_with_colour g o in *)
+(*   let g, h  = Molecule.add_node_with_colour g h in *)
+(*   let g     = Molecule.add_edge g c Link.Double o in *)
+(*   (Molecule.add_edge g c Link.Simple h, c) *)
 
-let phosphate : Molecule.t =
-  let g = Molecule.empty in
-  fst (Molecule.add_node_with_colour g p)
+(* let oxidation1 = { *)
+(*   input  = r_ch2_oh; *)
+(*   output = r_cho; *)
+(*   mapping = [ (hook1, hook2) ] *)
+(* } *)
 
-let seed = carbon
+(* let carbon, cv = *)
+(*   let g = Molecule.empty in *)
+(*   Molecule.add_node_with_colour g c *)
 
-let mset5 : Molecule.t Prelude.mset =
-  [ (carbon, 5);
-    (hydrogen, 20);
-    (oxygen, 10);
-    (phosphate, 2);
-  ]
+(* let hydrogen, hv = *)
+(*   let g = Molecule.empty in *)
+(*   Molecule.add_node_with_colour g h *)
 
-let mset4 : Molecule.t Prelude.mset =
-  [ (carbon, 4);
-    (hydrogen, 20);
-    (oxygen, 10);
-    (phosphate, 2);
-  ]
+(* let oxygen : Molecule.t = *)
+(*   let g = Molecule.empty in *)
+(*   fst (Molecule.add_node_with_colour g o) *)
 
-let mset3 : Molecule.t Prelude.mset =
-  [ (carbon, 3);
-    (hydrogen, 20);
-    (oxygen, 10);
-    (phosphate, 2);
-  ]
+(* let phosphate : Molecule.t = *)
+(*   let g = Molecule.empty in *)
+(*   fst (Molecule.add_node_with_colour g p) *)
 
-let mset2 : Molecule.t Prelude.mset =
-  [ (carbon, 2);
-    (hydrogen, 20);
-    (oxygen, 10);
-    (phosphate, 2);
-  ]
+(* let seed = carbon *)
 
-let bartek3 : Molecule.t Prelude.mset =
-  [ (carbon, 2);
-    (hydrogen, 20);
-    (oxygen, 3);
-    (phosphate, 3);
-  ]
+(* let mset5 : Molecule.t Prelude.mset = *)
+(*   [ (carbon, 5); *)
+(*     (hydrogen, 20); *)
+(*     (oxygen, 10); *)
+(*     (phosphate, 2); *)
+(*   ] *)
 
-let bartek4 : Molecule.t Prelude.mset =
-  [ (carbon, 3);
-    (hydrogen, 20);
-    (oxygen, 4);
-    (phosphate, 4);
-  ]
+(* let mset4 : Molecule.t Prelude.mset = *)
+(*   [ (carbon, 4); *)
+(*     (hydrogen, 20); *)
+(*     (oxygen, 10); *)
+(*     (phosphate, 2); *)
+(*   ] *)
 
+(* let mset3 : Molecule.t Prelude.mset = *)
+(*   [ (carbon, 3); *)
+(*     (hydrogen, 20); *)
+(*     (oxygen, 10); *)
+(*     (phosphate, 2); *)
+(*   ] *)
 
-let print result name =
-  let fd = open_out name in
-  List.iter
-    (List.iter (fun { input; output } ->
-      let smiles_in  = match Chemistry.to_smiles input  with None -> failwith "Error in SMILES output" | Some x -> x in
-      let smiles_out = match Chemistry.to_smiles output with None -> failwith "Error in SMILES output" | Some x -> x in
-      Printf.fprintf fd "%s + NAD <--> %s + NADH\n" smiles_in smiles_out
-     ))
-    result;
-  close_out fd
+(* let mset2 : Molecule.t Prelude.mset = *)
+(*   [ (carbon, 2); *)
+(*     (hydrogen, 20); *)
+(*     (oxygen, 10); *)
+(*     (phosphate, 2); *)
+(*   ] *)
 
-let mkprinter name =
-  let fd = open_out name in
-  let write = fun { input; output } ->
-      let smiles_in  = match Chemistry.to_smiles input  with None -> failwith "Error in SMILES output" | Some x -> x in
-      let smiles_out = match Chemistry.to_smiles output with None -> failwith "Error in SMILES output" | Some x -> x in
-      Printf.fprintf fd "%s + NAD <--> %s + NADH\n" smiles_in smiles_out
-  in
-  (fd, write)
+(* let bartek3 : Molecule.t Prelude.mset = *)
+(*   [ (carbon, 2); *)
+(*     (hydrogen, 20); *)
+(*     (oxygen, 3); *)
+(*     (phosphate, 3); *)
+(*   ] *)
 
-let mkprinterbartek name =
-  let fd = open_out name in
-  let write = fun mol ->
-      let smiles = match Chemistry.to_smiles mol with None -> failwith "Error in SMILES output" | Some x -> x in
-      Printf.fprintf fd "%s\n" smiles
-  in
-  (fd, write)
+(* let bartek4 : Molecule.t Prelude.mset = *)
+(*   [ (carbon, 3); *)
+(*     (hydrogen, 20); *)
+(*     (oxygen, 4); *)
+(*     (phosphate, 4); *)
+(*   ] *)
 
 
-let buff = 
-  Lexing.from_channel (open_in Sys.argv.(1))
+(* let print result name = *)
+(*   let fd = open_out name in *)
+(*   List.iter *)
+(*     (List.iter (fun { input; output } -> *)
+(*       let smiles_in  = match Chemistry.to_smiles input  with None -> failwith "Error in SMILES output" | Some x -> x in *)
+(*       let smiles_out = match Chemistry.to_smiles output with None -> failwith "Error in SMILES output" | Some x -> x in *)
+(*       Printf.fprintf fd "%s + NAD <--> %s + NADH\n" smiles_in smiles_out *)
+(*      )) *)
+(*     result; *)
+(*   close_out fd *)
 
-let reacs = 
-  SmilesParser.reactions SmilesLexer.token buff
+(* let mkprinter name = *)
+(*   let fd = open_out name in *)
+(*   let write = fun { input; output } -> *)
+(*       let smiles_in  = match Chemistry.to_smiles input  with None -> failwith "Error in SMILES output" | Some x -> x in *)
+(*       let smiles_out = match Chemistry.to_smiles output with None -> failwith "Error in SMILES output" | Some x -> x in *)
+(*       Printf.fprintf fd "%s + NAD <--> %s + NADH\n" smiles_in smiles_out *)
+(*   in *)
+(*   (fd, write) *)
 
-let _ = Printf.printf "%s%!" (Smiles.print_reactions reacs)
+(* let mkprinterbartek name = *)
+(*   let fd = open_out name in *)
+(*   let write = fun mol -> *)
+(*       let smiles = match Chemistry.to_smiles mol with None -> failwith "Error in SMILES output" | Some x -> x in *)
+(*       Printf.fprintf fd "%s\n" smiles *)
+(*   in *)
+(*   (fd, write) *)
+
+(* let buff =  *)
+(*   Lexing.from_channel (open_in Sys.argv.(1)) *)
+
+(* let reacs =  *)
+(*   SmilesParser.reactions SmilesLexer.token buff *)
+
+(* let _ = Printf.printf "%s%!" (Reactions.print_reactions reacs) *)
+
+
+
+
+
+
+
+
+
+
 
 (* Straightforward molecule generation test. *)
 (*

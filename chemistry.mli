@@ -51,10 +51,12 @@ type reaction = {
 
 val to_smiles : Molecule.t -> string option
 
+val molecule_to_graphs : Reactions.smiles_ast -> (Molecule.t * Graph.vertex * ((string * Graph.vertex) list)) list
+
 val typeof : (Atom.t, Link.t) Graph.info -> Atom.t
 
 val enumerate : Molecule.t -> Molecule.t Prelude.mset -> (Molecule.t -> unit) -> unit
- 
+  
 val instantiate_schemes :
   reaction list ->
   Molecule.Growable.t Prelude.mset -> (reaction -> unit) -> unit
