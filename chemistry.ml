@@ -173,92 +173,66 @@ let rec to_smiles_aux g already_explored current_node =
 let to_smiles graph =
   to_smiles_aux graph [] (Graph.v_of_int 0)
 
-(* let to_smiles = *)
-(*   let open Molecule.R in *)
-(*   let rec aux tree = *)
-(*     match tree with *)
-(*     | ECNode(x, cs) -> *)
-(*       match x.Atom.atom with *)
-(*       | Atom.H -> None *)
-(*       | Atom.P -> Some "p" *)
-(*       | _ -> *)
-(*         let str =  *)
-(*           List.fold_left (fun acc (bond, target) -> *)
-(*             match aux target with *)
-(*             | None -> acc *)
-(*             | Some str -> *)
-(*               match bond with *)
-(*               | Link.Simple -> *)
-(*                 Printf.sprintf "%s(%s)" acc str *)
-(*               | Link.Double -> *)
-(*                 Printf.sprintf "%s(=%s)" acc str *)
-(*               | Link.Triple -> *)
-(*                 Printf.sprintf "%s(#%s)" acc str *)
-(*           ) (Atom.print x) cs *)
-(*         in *)
-(*         Some str *)
-(*   in *)
-(*   fun graph -> *)
-(*     let tree = Molecule.root graph (Graph.v_of_int 0) in *)
-(*     aux tree *)
-
 (* -------------------------------------------------------------------------- *)
 (* Reaction instantiation *)
-
-(* A reaction scheme is given by a reaction input, a reaction output and
-   an (injective) mapping from input stubs to output stubs. If everything
-   is to make sense, the mapping should in fact be bijective. *)
-type reaction =
-  { input   : Molecule.t;
-    output  : Molecule.t;
-    mapping : (Graph.vertex * Graph.vertex) list
-  }
-
-(* (\* Checks the validity of a Reactions.smiles_ast molecule *\) *)
-(* let rec check_chop_validity m = *)
-(*   match m with *)
-(*   | Reactions.Node(atom, submols) -> *)
-(*     match atom with *)
-(*     | Reaction.Atom s -> *)
-(*       match s with *)
-(*       | "C" -> *)
-(*       | "H" *)
-(*       | "O" *)
-(*       | "P" *)
-(*     | Reaction.Var s *)
-
+(* -------------------------------------------------------------------------- *)
 
 let c = Atom.({ atom = C; arity = 4 })
 let h = Atom.({ atom = H; arity = 1 })
 let o = Atom.({ atom = O; arity = 2 })
 let p = Atom.({ atom = P; arity = 1 })
 
+let carbon, cv =
+  let g = Molecule.empty in
+  Molecule.add_node_with_colour g c
+
+let hydrogen, hv =
+  let g = Molecule.empty in
+  Molecule.add_node_with_colour g h
+
+let oxygen : Molecule.t =
+  let g = Molecule.empty in
+  fst (Molecule.add_node_with_colour g o)
+
+let phosphate : Molecule.t =
+  let g = Molecule.empty in
+  fst (Molecule.add_node_with_colour g p)
+
+
 let atoms_enum = [ c; h; o; p ]
+
+let atom_of_string s =
+  match s with
+  | "C" -> Some c
+  | "H" -> Some h
+  | "O" -> Some o
+  | "Phos" -> Some p
+  | _   -> None
 
 let link_of_smiles = function
   | Reactions.Simple -> Link.Simple
   | Reactions.Double -> Link.Double
   | Reactions.Triple -> Link.Triple
 
+exception NonConvertibleMolecule of string
+
 (* Maps Reactions.smart_ast to actual graphs, instantiating all
    variables for concrete atoms. 
 
            /!\ Does not check for arity /!\  
 
-   Produces a map variable -> node along the way.
+   Produces a map variable -> node along the way. If the molecule
+   cannot be converted, raises NonConvertibleMolecule
 *)
 let rec molecule_to_graphs m graph map =
   match m with
   | Reactions.Node(Reactions.Atom s, submols) ->
-    let colour =
-      (match s with
-      | "C" -> c
-      | "H" -> h
-      | "O" -> o
-      | "P" -> p
-      | _   -> failwith "Chemistry.molecule_to_graph: unknown atomic compound")
-    in
-    extend_graph_with_colour m graph map colour submols
+    (match atom_of_string s with
+    | None -> 
+      raise (NonConvertibleMolecule s)
+    | Some colour ->
+      extend_graph_with_colour m graph map colour submols
+    )    
   | Reactions.Node(Reactions.Var v, submols) ->
     let res_c = extend_graph_with_colour m graph map c submols
     and res_h = extend_graph_with_colour m graph map h submols
@@ -288,23 +262,119 @@ and link_extended_graphs_to_root extended_graphs anchor link acc =
   ) acc extended_graphs
 
 
-let molecule_to_graphs m = molecule_to_graphs m Molecule.empty []
+(* Converts a molecule into a graph, as [molecule_to_graphs],
+   but replaces variables with actual concrete nodes found in
+   the map. Produces a vertex -> vertex map. *)
+let rec instantiate_molecule m graph string_map vertex_map =
+  match m with
+  | Reactions.Node(Reactions.Atom s, submols) ->
+    (match atom_of_string s with
+    | None        -> raise (NonConvertibleMolecule s)
+    | Some colour ->
+      extend_graph_with_colour' m graph string_map vertex_map colour submols)
+  | Reactions.Node(Reactions.Var v, submols) ->
+    let colour, source_vertex =
+      try List.assoc v string_map with
+      | Not_found -> failwith "Chemistry.instantiate_molecule: variable not found in given map"
+    in
+    let (graph, anchor, vertex_map) = extend_graph_with_colour' m graph string_map vertex_map colour submols in
+    (graph, anchor, (source_vertex, anchor) :: vertex_map)
+
+and extend_graph_with_colour' m graph string_map vertex_map colour submols =
+  let (graph, anchor) = Graph.add_node_with_colour graph colour in
+  List.fold_left (fun (graph, anchor, vertex_map) (link, submol) ->
+    let (g', anchor', vertex_map) = instantiate_molecule submol graph string_map vertex_map in
+    let g = Molecule.add_edge g' anchor (link_of_smiles link) anchor' in
+    (g, anchor, vertex_map)
+  ) (graph, anchor, vertex_map) submols
 
 
-(* Converts Reactions.smiles_ast to a set of molecules. Each variable is
-   replaced by all compatible Atom.t elements, taking into account arity. *)
-(* let rec concretize_molecule m = *)
-(*   match m with *)
-(*   | Reactions.Node(atom, submols) -> *)
-(*     match atom with *)
-(*     | Reaction.Atom s -> *)
-(*       match s with *)
-(*       | "C" *)
-(*       | "H" *)
-(*       | "O" *)
-(*       | "P" *)
-(*     | Reaction.Var s *)
-(* Convert reaction from the parser to a proper reaction. *)
+(* Checks that the graph produced from a parsed molecule respects the arities
+   of each atomic species. *)  
+let check_arity m =
+  Molecule.fold (fun v lab adjs acc ->
+    let arity = List.length adjs in
+    arity <= lab.Atom.arity && acc
+  ) m true
+
+(* Checks that any variable appears at most once in a molecule. *)
+let check_linearity map =
+  let map' = List.sort (fun (x,_) (y,_) -> String.compare x y) map in
+  map' = (Prelude.filter_duplicates' map')
+
+(* Convert a parsed molecule into a set of compatible graphs,
+   filters out molecules which do not verify the arity constraint. 
+   TODO: failure of linearity should raise an error. *)
+let molecule_to_graphs m = 
+  let outcomes = molecule_to_graphs m Molecule.empty [] in
+  List.filter (fun (g, anchor, map) ->
+    check_arity g &&
+    check_linearity map
+  ) outcomes
+
+let molecule_is_trivial =
+  let open Reactions in
+  function
+  | Node(Atom(s), []) ->
+      (match atom_of_string s with
+      | None   -> true
+      | Some _ -> false
+      )
+  | _ -> false
+        
+let isolate_nontrivial_molecule (l : Reactions.smiles_ast list) =
+  let open Reactions in
+  let (trivial, non_trivial) = List.partition molecule_is_trivial l in
+  match non_trivial with
+  | _ :: _ :: _ -> failwith "Chemistry.isolate_nontrivial_molecule: more than one non-trivial molecule"
+  | _ ->
+    let trivial = List.map (function 
+      | Node(Atom(s), []) -> s
+      | _ -> failwith "Chemistry.isolate_nontrivial_molecule: bug found"
+    ) trivial in
+    (trivial, non_trivial)
+
+
+(* A reaction scheme is given by a reaction input, a reaction output and
+   an (injective) mapping from input stubs to output stubs. If everything
+   is to make sense, the mapping should in fact be bijective. *)
+type nontrivial_reactants =
+  { input   : Molecule.t;
+    output  : Molecule.t;
+    mapping : (Graph.vertex * Graph.vertex) list
+  }
+
+type reaction = 
+  { nontrivial_reactants : nontrivial_reactants option;
+    trivial_inputs       : string list;
+    trivial_outputs      : string list
+  }
+
+(* Converts a parsed reaction into a list of concrete reactions. *)
+let instantiate_reaction { Reactions.input; output } =
+  let (trivial_inputs, non_trivial_input)   = isolate_nontrivial_molecule input in
+  let (trivial_outputs, non_trivial_output) = isolate_nontrivial_molecule output in
+  match non_trivial_input, non_trivial_output with
+  | [], [] ->
+    [{ nontrivial_reactants = None;
+       trivial_inputs       = trivial_inputs;
+       trivial_outputs      = trivial_outputs }]
+  | [input], [output] ->
+    let inputs = molecule_to_graphs input in
+    List.map (fun (lhs, hook, string_map) ->
+      let string_map = List.map (fun (str, v) -> (str, (Molecule.get_colour lhs v, v))) string_map in
+      let (rhs, hook', vertex_map) = instantiate_molecule output Molecule.empty string_map [] in
+      let nontrivial = 
+        { input   = lhs;
+          output  = rhs;
+          mapping = vertex_map } in
+      { nontrivial_reactants = Some nontrivial;
+        trivial_inputs       = trivial_inputs;
+        trivial_outputs      = trivial_outputs }
+    ) inputs    
+  | _ ->
+    failwith "Chemistry.instantiate_reaction: mismatching number of non-trivial reactants"     
+
 
 
 (* Given a node, returns its "signature", which uniquely identifies
@@ -321,12 +391,14 @@ let extract_seeds schemes =
   let rec loop schemes acc =
     match schemes with
     | [] -> acc
-    | { input; mapping } :: tail ->
+    | { nontrivial_reactants = Some { input; mapping } } :: tail ->
       let acc = List.fold_left (fun acc (seed, _) ->
         let info = Graph.get_info input seed in
         (typeof info) :: acc
       ) acc mapping
       in
+      loop tail acc
+    | _ :: tail->
       loop tail acc
   in
   let seeds = loop schemes [] in
@@ -358,33 +430,72 @@ let rec fold_fsection_aux gen f index acc =
 let fold_fsection_tr gen f index facc = fold_fsection_aux gen f index [facc]
 
 let rec iter_fsection gen f index current writef =
-    match index with
-    | [] -> writef current
-    | i :: tl ->
-      let col, card = gen i in
-      Generator.CanonicalSet.iter (fun x ->
-        iter_fsection gen f tl (f i x current) writef
-      ) col
+  match index with
+  | [] -> writef current
+  | i :: tl ->
+    let col, card = gen i in
+    Generator.CanonicalSet.iter (fun x ->
+      iter_fsection gen f tl (f i x current) writef
+    ) col
 
-let instantiate_scheme seeds writef { input; output; mapping } =
-  iter_fsection
-    (fun (vin, _) -> List.assoc (typeof (Graph.get_info input vin)) seeds)
-    (fun (vin, vout) (graphtling, _) { input; output; mapping } -> 
-      let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
-      let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
+
+let print_reaction writer reaction =
+  match reaction.nontrivial_reactants with
+  | None ->
+    let trivial_inputs  = Prelude.to_sseq (fun x -> x) " + " reaction.trivial_inputs
+    and trivial_outputs = Prelude.to_sseq (fun x -> x) " + " reaction.trivial_outputs in
+    writer (Printf.sprintf "%s <-> %s;\n" trivial_inputs trivial_outputs)
+  | Some { input; output } ->
+    let smiles_in  = 
+      match to_smiles input with
+      | None -> 
+        (Molecule.print input;
+         failwith "Error in SMILES output")
+      | Some x -> x 
+    in
+    let smiles_out = 
+      match to_smiles output with 
+      | None -> 
+        (Molecule.print input;
+         failwith "Error in SMILES output")
+      | Some x -> x
+    in
+    let inputs  = Prelude.to_sseq (fun x -> x) " + " (smiles_in :: reaction.trivial_inputs)
+    and outputs = Prelude.to_sseq (fun x -> x) " + " (smiles_out :: reaction.trivial_outputs) in
+    writer (Printf.sprintf "%s <-> %s;\n" inputs outputs)
+
+
+let instantiate_scheme seeds writef reaction =
+  match reaction.nontrivial_reactants with
+  | Some { input; output; mapping } ->
+    iter_fsection
+      (fun (vin, _) -> List.assoc (typeof (Graph.get_info input vin)) seeds)
+      (fun (vin, vout) (graphtling, _) { input; output; mapping } -> 
+        let input  = Graph.graft input graphtling  vin (Graph.v_of_int 0) in
+        let output = Graph.graft output graphtling vout (Graph.v_of_int 0) in
+        { input; output; mapping }
+      )
+      mapping
       { input; output; mapping }
-    )
-    mapping
-    { input; output; mapping }
-    writef
+      (function nontriv -> writef { reaction with nontrivial_reactants = (Some nontriv) })
+  | None ->
+    ()
 
 let instantiate_schemes schemes ingredients (writef : reaction -> unit) =
   let seeds = extract_seeds schemes in
   let sat   = saturate_all_seeds seeds ingredients in
   List.iter (instantiate_scheme sat writef) schemes
 
+let instantiate_reactions (reactions : Reactions.reactions) ingredients (writef : string -> unit) =
+  let schemes =
+    List.fold_left (fun acc reaction -> 
+      List.rev_append (instantiate_reaction reaction) acc      
+    ) [] reactions
+  in
+  instantiate_schemes schemes ingredients (print_reaction writef)
+
 let enumerate seed mset writef =
-  let canonical, _  = Generator.enumerate seed mset (Generator.CanonicalSet.empty, 0) in
+  let canonical, _ = Generator.enumerate seed mset (Generator.CanonicalSet.empty, 0) in
   Generator.CanonicalSet.iter (fun (x,_) -> writef x) canonical
 (* let instantiate_schemes schemes multiset = *)
 (*   let seeds = extract_seeds schemes in *)

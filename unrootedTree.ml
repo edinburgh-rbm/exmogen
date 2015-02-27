@@ -59,6 +59,10 @@ struct
   let add_node_with_colour = Graph.add_node_with_colour
 
   let add_edge = Graph.add_edge
+    
+  let get_colour = Graph.get_colour
+
+  let fold = Graph.fold
 
   (* --------------------------- *)
   (* Printing to DOT file format *)

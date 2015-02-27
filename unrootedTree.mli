@@ -23,6 +23,10 @@ sig
   val empty : t
   val add_node_with_colour : t -> NLab.t -> t * Graph.vertex
   val add_edge             : t -> Graph.vertex -> LLab.t -> Graph.vertex -> t
+  val fold                 : (Graph.vertex -> NLab.t -> (LLab.t * Graph.vertex) list -> 'c -> 'c) -> t -> 'c -> 'c
+
+  val get_colour           : t -> Graph.vertex -> NLab.t
+
   val to_dot               : string -> string -> t -> (NLab.t -> Graph.vertex -> string) -> unit
   val disjoint_union       : t -> t -> t
   val print                : t -> unit

@@ -15,5 +15,6 @@ ocamlopt.opt smilesParser.mli
 ocamllex smilesLexer.mll
 
 ocamlopt.opt -annot -inline 100 -o main -annot\
+ float3.ml mat3.ml springmodel.ml\
  smilesParser.ml smilesLexer.ml\
  unix.cmxa prelude.ml ptmap.ml canonicalSet.ml rootedTree.ml matrix.ml graph.ml growable.ml unrootedTree.ml chemistry.ml output.ml reactions.ml main.ml

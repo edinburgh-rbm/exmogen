@@ -1,17 +1,5 @@
 open Chemistry
 
-
-let m = 
-  let open Reactions in
-  let h   = Node(Atom("H"), []) in
-  let oh  = Node(Atom("O"), [Simple, h]) in
-  let o   = Node(Atom("O"), []) in
-  Node(Atom("C"), [ (Double, o); (Simple, h); (Simple, oh)])
-
-let g = molecule_to_graphs m
-
-let _ = List.iter (fun (g, _, _) -> Molecule.to_dot "chooh" "CHOOH" g (fun node i -> Atom.print node)) g
-
 (* let c = Atom.({ atom = C; arity = 4 }) *)
 (* let h = Atom.({ atom = H; arity = 1 }) *)
 (* let o = Atom.({ atom = O; arity = 2 }) *)
@@ -131,17 +119,33 @@ let _ = List.iter (fun (g, _, _) -> Molecule.to_dot "chooh" "CHOOH" g (fun node 
 (*   in *)
 (*   (fd, write) *)
 
-(* let buff =  *)
-(*   Lexing.from_channel (open_in Sys.argv.(1)) *)
 
-(* let reacs =  *)
-(*   SmilesParser.reactions SmilesLexer.token buff *)
+let _ =
+  if Array.length Sys.argv <= 1 then
+    (Printf.fprintf stderr "no input file";
+     exit 1)
+  else
+    ()
 
-(* let _ = Printf.printf "%s%!" (Reactions.print_reactions reacs) *)
+let buff =
+  Lexing.from_channel (open_in Sys.argv.(1))
 
+let reacs =
+  SmilesParser.reactions SmilesLexer.token buff
 
+let _ = Printf.printf "%s%!" (Reactions.print_reactions reacs)
 
+let bartek3 : Molecule.t Prelude.mset =
+  [ (carbon, 2);
+    (hydrogen, 20);
+    (oxygen, 3);
+    (phosphate, 3);
+  ]
 
+let _ = 
+  let name = Sys.argv.(1)^".output" in
+  let fd = open_out name in
+  Chemistry.instantiate_reactions reacs bartek3 (output_string fd)
 
 
 
@@ -167,12 +171,11 @@ let _ =
 
 (* generating reactions *)
 
-(*
-let _ =
-  let fd, wr = mkprinter "oxy_3C.mol" in
-  let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 wr in
-  Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0
-*)
+
+(* let _ = *)
+(*   let fd, wr = mkprinter "oxy_3C.mol" in *)
+(*   let result = Chemistry.instantiate_schemes [ oxidation1 ] mset3 wr in *)
+(*   Printf.printf "Generated %d instances for size 2 radical in %f seconds\n%!" 0 0.0 *)
 
 (* let _ = *)
 (*   let fd, wr = mkprinter "oxy_3C.mol" in *)
